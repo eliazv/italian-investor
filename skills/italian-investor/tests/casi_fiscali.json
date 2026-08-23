@@ -1,0 +1,88 @@
+[
+  {
+    "nome": "ETF in gain: le minus in zainetto NON si compensano",
+    "perche": "La plusvalenza da OICR e' reddito di capitale. E' l'errore tipico del modello.",
+    "input": {"tipo": "etf", "pmc": 90, "prezzo": 120, "quantita": 100, "minus_disponibili": 5000},
+    "atteso": {"categoria_reddito": "reddito_di_capitale", "minusvalenze_utilizzate": 0.0, "imposta_stimata": 780.0}
+  },
+  {
+    "nome": "ETF in perdita: genera minusvalenza in zainetto",
+    "perche": "La differenza negativa da OICR e' reddito diverso.",
+    "input": {"tipo": "etf", "pmc": 100, "prezzo": 80, "quantita": 50, "minus_disponibili": 0},
+    "atteso": {"categoria_reddito": "reddito_diverso", "imposta_stimata": 0.0, "minusvalenza_generata": 1000.0}
+  },
+  {
+    "nome": "Azione in gain: la minus si compensa",
+    "perche": "Il capital gain azionario e' reddito diverso.",
+    "input": {"tipo": "azione", "pmc": 100, "prezzo": 150, "quantita": 100, "minus_disponibili": 2000},
+    "atteso": {"categoria_reddito": "reddito_diverso", "minusvalenze_utilizzate": 2000.0, "imposta_stimata": 780.0}
+  },
+  {
+    "nome": "Azione in gain con zainetto capiente: imposta azzerata",
+    "input": {"tipo": "azione", "pmc": 100, "prezzo": 110, "quantita": 100, "minus_disponibili": 5000},
+    "atteso": {"minusvalenze_utilizzate": 1000.0, "imposta_stimata": 0.0, "zainetto_residuo": 4000.0}
+  },
+  {
+    "nome": "BTP in gain: imposizione effettiva 12,5%",
+    "perche": "L'aliquota ridotta si ottiene applicando il 26% al 48,08% della base: il risultato e' 12,5008%, non esattamente 12,5%.",
+    "input": {"tipo": "titolo_stato", "pmc": 0.95, "prezzo": 1.0, "quantita": 20000, "minus_disponibili": 0},
+    "atteso": {"quota_agevolata_applicata": 1.0, "imposta_stimata": 125.01}
+  },
+  {
+    "nome": "BTP in gain con minus: prima compensa, poi aliquota ridotta",
+    "input": {"tipo": "titolo_stato", "pmc": 0.95, "prezzo": 1.0, "quantita": 20000, "minus_disponibili": 400},
+    "atteso": {"minusvalenze_utilizzate": 400.0, "imponibile": 600.0, "imposta_stimata": 75.0}
+  },
+  {
+    "nome": "Obbligazione corporate in gain: 26% pieno, compensabile",
+    "input": {"tipo": "obbligazione", "pmc": 0.9, "prezzo": 1.0, "quantita": 10000, "minus_disponibili": 500},
+    "atteso": {"categoria_reddito": "reddito_diverso", "minusvalenze_utilizzate": 500.0, "imposta_stimata": 130.0}
+  },
+  {
+    "nome": "ETF con quota titoli di Stato al 50%: aliquota mista",
+    "perche": "Non esiste 'ETF governativo = 12,5%': conta la quota comunicata dall'emittente.",
+    "input": {"tipo": "etf", "pmc": 100, "prezzo": 110, "quantita": 100, "minus_disponibili": 0, "quota_stato": 0.5},
+    "atteso": {"quota_agevolata_applicata": 0.5, "imposta_stimata": 192.5}
+  },
+  {
+    "nome": "Certificate in gain: reddito diverso, compensabile",
+    "input": {"tipo": "certificate", "pmc": 900, "prezzo": 1000, "quantita": 10, "minus_disponibili": 400},
+    "atteso": {"minusvalenze_utilizzate": 400.0, "imposta_stimata": 156.0}
+  },
+  {
+    "nome": "ETC/ETN in gain: non e' un OICR, quindi compensabile",
+    "input": {"tipo": "etc_etn", "pmc": 50, "prezzo": 70, "quantita": 100, "minus_disponibili": 1000},
+    "atteso": {"categoria_reddito": "reddito_diverso", "minusvalenze_utilizzate": 1000.0, "imposta_stimata": 260.0}
+  },
+  {
+    "nome": "Cripto: il motore deve rifiutarsi di calcolare",
+    "perche": "Regime cambiato piu volte: va verificato per anno d'imposta.",
+    "input": {"tipo": "cripto", "pmc": 20000, "prezzo": 60000, "quantita": 1, "minus_disponibili": 0},
+    "atteso": {"imposta_stimata": null, "errore_atteso": true}
+  },
+  {
+    "nome": "ETF non armonizzato: il motore deve rifiutarsi di calcolare",
+    "input": {"tipo": "etf_non_armonizzato", "pmc": 100, "prezzo": 130, "quantita": 10, "minus_disponibili": 0},
+    "atteso": {"imposta_stimata": null, "errore_atteso": true}
+  },
+  {
+    "nome": "Tipo sconosciuto: nessuna deduzione per analogia",
+    "input": {"tipo": "prodotto_strutturato_x", "pmc": 100, "prezzo": 120, "quantita": 10, "minus_disponibili": 0},
+    "atteso": {"imposta_stimata": null, "errore_atteso": true}
+  },
+  {
+    "nome": "Commissioni: riducono il risultato imponibile",
+    "input": {"tipo": "azione", "pmc": 100, "prezzo": 110, "quantita": 100, "minus_disponibili": 0, "costi": 100},
+    "atteso": {"risultato_lordo": 900.0, "imposta_stimata": 234.0}
+  },
+  {
+    "nome": "ETF in gain senza quota_stato: deve segnalare il dato mancante",
+    "input": {"tipo": "etf", "pmc": 100, "prezzo": 120, "quantita": 10, "minus_disponibili": 0},
+    "atteso": {"verificare_contiene": "Quota di titoli di Stato"}
+  },
+  {
+    "nome": "ETF in gain con minus: deve avvisare che non sono utilizzabili",
+    "input": {"tipo": "etf", "pmc": 100, "prezzo": 120, "quantita": 10, "minus_disponibili": 1000},
+    "atteso": {"verificare_contiene": "NON abbattuta"}
+  }
+]

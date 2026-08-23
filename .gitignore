@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+
+# Dati personali: non versionare portafogli reali
+portafoglio*.csv
+!skills/italian-investor/examples/portafoglio-esempio.csv
+*.xlsx
+
+# Materiale di lavoro, non distribuito
+analisi.md

@@ -1,0 +1,51 @@
+# Regole correnti (snapshot da riverificare)
+
+> **Ultima verifica: nessuna.** I valori qui sotto sono un punto di partenza per
+> la ricerca, **non** una fonte. Prima di usarne uno in un'analisi, verificalo
+> secondo [fonti.md](fonti.md) e aggiorna la colonna "verificato il".
+> Se non riesci a verificarlo, riporta `NON VERIFICATO` nell'output.
+
+## Aliquote e basi
+
+| Voce | Valore di riferimento | Verificato il | Fonte |
+| --- | --- | --- | --- |
+| Aliquota ordinaria redditi finanziari | 26% | — | — |
+| Titoli di Stato IT / White List / enti assimilati | imposizione effettiva 12,5% (26% su frazione imponibile 48,08%) | — | — |
+| Quota agevolata di un OICR | dipende dal singolo fondo, comunicata dall'emittente | — | — |
+| Imposta di bollo dossier titoli | 0,2% annuo del controvalore | — | — |
+| IVAFE (attività estere) | 0,2% annuo, aliquota maggiorata per prodotti in Stati non collaborativi | — | — |
+| Cripto-attività | regime e aliquota modificati più volte di recente: **verificare l'anno d'imposta** | — | — |
+
+## Termini
+
+| Voce | Valore di riferimento | Verificato il | Fonte |
+| --- | --- | --- | --- |
+| Utilizzo minusvalenze | entro il 4° anno successivo al realizzo | — | — |
+| Franchigia successione coniuge / parenti in linea retta | 1.000.000 € per erede | — | — |
+| Aliquote successione | variabili per grado di parentela | — | — |
+
+## Riforma in corso
+
+| Voce | Stato | Verificato il |
+| --- | --- | --- |
+| Nuovo testo unico imposte sui redditi (D.Lgs. 117/2026) | pubblicato in GU il 03/07/2026, disposizioni applicabili dal 01/01/2027; sostituisce il DPR 917/1986 e cambia la numerazione degli articoli | 24/08/2026 - Normattiva, permalink in [fonti.md](fonti.md) |
+
+Per i periodi d'imposta fino al 2026 si cita il DPR 917/1986; dal 2027 il nuovo
+testo unico. Nel periodo di transizione riporta entrambi i riferimenti.
+
+## Cosa cambia più spesso
+
+Da ricontrollare a ogni analisi, anche se l'hai verificato di recente:
+
+- regime delle cripto-attività;
+- possibilità e condizioni di affrancamento/rivalutazione previste dalle leggi
+  di bilancio (sono misure temporanee, con finestre e aliquote che cambiano);
+- elenco White List (DM 4 settembre 1996 e successive modifiche);
+- misure di bollo e IVAFE;
+- franchigie e aliquote di successione.
+
+## Come aggiornare questo file
+
+Aggiorna una riga solo dopo aver aperto la fonte primaria. Compila `verificato
+il` con la data e `fonte` con norma + articolo + link. Una riga senza fonte va
+trattata come non esistente.

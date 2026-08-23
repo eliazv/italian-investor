@@ -1,0 +1,8 @@
+isin,nome,tipo,quantita,pmc,prezzo,asset_class,valuta_esposizione,area,settore,broker,quota_stato
+IE00BK5BQT80,ETF azionario globale,etf,300,95.40,128.20,azionario,USD,globale,diversificato,BrokerA,0
+IE00B4L5Y983,ETF azionario mondiale,etf,150,60.10,88.75,azionario,USD,globale,diversificato,BrokerA,0
+IT0005441883,BTP 2037,titolo_stato,20000,0.9650,1.0130,obbligazionario,EUR,italia,governativo,BrokerA,1
+IE00B3F81R35,ETF obbligazionario aggregate,etf,200,52.00,49.80,obbligazionario,EUR,europa,aggregate,BrokerB,0.35
+US0378331005,Apple,azione,40,145.00,212.00,azionario,USD,usa,tecnologia,BrokerB,0
+XS2434891219,Obbligazione corporate 2029,obbligazione,10000,0.9900,0.9450,obbligazionario,EUR,europa,industriale,BrokerB,0
+CASH-EUR,Liquidita conto,liquidita,1,8000.00,8000.00,liquidita,EUR,italia,cash,BrokerA,0

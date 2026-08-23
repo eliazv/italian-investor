@@ -1,0 +1,40 @@
+{
+  "name": "italian-investor",
+  "owner": {
+    "name": "Elia Zavatta",
+    "url": "https://github.com/eliazv"
+  },
+  "metadata": {
+    "description": "Skill per l'analisi di portafoglio tax-aware per investitori residenti in Italia, con verifica su fonti normative primarie.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "italian-investor",
+      "source": "./",
+      "description": "Analisi di portafoglio e fiscalita italiana (ETF, azioni, BTP, obbligazioni, certificates): minusvalenze e zainetto fiscale, ribilanciamento tax-aware, successione. Procedura anti-allucinazione con verifica su Normattiva, Agenzia delle Entrate, MEF e CONSOB.",
+      "version": "0.1.0",
+      "author": {
+        "name": "Elia Zavatta",
+        "url": "https://github.com/eliazv"
+      },
+      "homepage": "https://github.com/eliazv/italian-investor",
+      "license": "MIT",
+      "keywords": [
+        "finanza",
+        "fiscalita",
+        "italia",
+        "portafoglio",
+        "etf",
+        "btp",
+        "minusvalenze",
+        "tasse",
+        "investimenti",
+        "ribilanciamento",
+        "successione",
+        "italian-tax",
+        "portfolio-analysis"
+      ]
+    }
+  ]
+}
