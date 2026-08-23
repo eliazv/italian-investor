@@ -180,6 +180,9 @@ rendiconto fiscale del broker.
 
 ## Contribuire
 
+Convenzioni del repo (bump di `version` a ogni release, test obbligatori, niente
+regole fiscali senza fonte) in [CLAUDE.md](CLAUDE.md).
+
 Il contributo più utile è un **caso fiscale**: aggiungi una voce a
 `skills/italian-investor/tests/casi_fiscali.json` con il risultato atteso e la
 fonte nel campo `perche`, poi verifica che
