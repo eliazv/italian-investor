@@ -3,7 +3,7 @@
 
 I casi stanno in tests/casi_fiscali.json. Ogni modifica al motore deve passarli.
 Se una verifica normativa dimostra che un caso atteso e' sbagliato, si corregge
-prima il caso (citando la fonte nel campo "perche"), poi il motore.
+prima il caso (citando la fonte), poi il motore.
 
     python tests/run_tests.py
 """
@@ -52,12 +52,16 @@ def main():
     with open(os.path.join(BASE, "tests", "casi_fiscali.json"), encoding="utf-8") as f:
         casi = json.load(f)
 
-    falliti, senza_fonte = 0, []
+    falliti = 0
     for caso in casi:
-        if (caso.get("tipo_caso", "normativo") == "normativo"
-                and not caso.get("verificato_il")):
-            senza_fonte.append(caso["nome"])
-        errori = esegui(caso)
+        errori = []
+        if caso.get("tipo_caso", "normativo") == "normativo":
+            mancanti = [campo for campo in ("fonte", "articolo", "verificato_il")
+                        if not caso.get(campo)]
+            if mancanti:
+                errori.append("caso normativo senza metadati obbligatori: %s"
+                              % ", ".join(mancanti))
+        errori.extend(esegui(caso))
         if errori:
             falliti += 1
             print("FAIL  %s" % caso["nome"])
@@ -67,13 +71,9 @@ def main():
             print("ok    %s" % caso["nome"])
 
     print("\n%d casi, %d falliti" % (len(casi), falliti))
-    if senza_fonte:
-        print("\n%d casi non ancora verificati su fonte primaria "
-              "(campo verificato_il vuoto):" % len(senza_fonte))
-        for nome in senza_fonte:
-            print("      %s" % nome)
-        print("Non fanno fallire i test: sono assunzioni, da verificare prima di usare "
-              "il motore su un patrimonio reale.")
+    if falliti:
+        print("Ogni caso normativo deve avere fonte, articolo e verificato_il, oltre "
+              "a produrre il risultato atteso.")
     return 1 if falliti else 0
 
 
