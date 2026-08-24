@@ -100,6 +100,14 @@ skill non produce un importo singolo: restituisce un **intervallo** (imposta con
 quota 0% e con quota 100%), marca `dato_mancante` e chiede la percentuale, invece
 di stimarla.
 
+La stessa percentuale conta anche quando l'OICR è venduto in perdita. La
+Circolare Agenzia delle Entrate 19/E del 27/06/2014 chiarisce che la perdita
+riferibile ai titoli pubblici è deducibile per un importo ridotto del 51,92%:
+in pratica quella componente rileva al **48,08%**. Per esempio, su una perdita
+di 1.000 € con quota pubblica 50%, la minusvalenza fiscalmente rilevante è
+740,40 €. Se la quota non è nota, il motore restituisce uno scenario invece di
+inventarla.
+
 ### Perché l'aliquota agevolata dà 12,5008% e non 12,5%?
 
 Perché si ottiene computando il reddito diverso nella misura del 48,08%
@@ -143,7 +151,7 @@ references/fiscalita.md        schema di ragionamento fiscale, incl. successione
 references/regole-correnti.md  i numeri che cambiano, con data di verifica
 scripts/tax_engine.py          classificazione strumenti e simulazione vendite
 scripts/portfolio.py           metriche, esposizioni, strategie di ribilanciamento
-tests/                         18 casi fiscali di regressione, eseguiti in CI
+tests/                         20 casi fiscali/comportamentali, eseguiti in CI
 ```
 
 Principi:
@@ -169,7 +177,9 @@ CSV o export di un Google Sheet, una riga per posizione. Colonne richieste:
 consigliate: `valuta_esposizione, area, settore, broker, quota_stato`.
 
 - `tipo`: `etf`, `oicr`, `azione`, `obbligazione`, `titolo_stato`, `etc_etn`,
-  `certificate`, `liquidita`.
+  `certificate`, `liquidita`. È un dato dichiarato in input: prima di usare il
+  risultato fiscale va verificato che sia coerente con la natura giuridica
+  ricavata dall'ISIN/KID.
 - Obbligazioni: `quantita` = valore nominale, `pmc`/`prezzo` in frazione
   (corso 101,30 → `1.0130`).
 - `valuta_esposizione`: la valuta dei **sottostanti**, non quella di quotazione.
@@ -182,14 +192,15 @@ Esempio pronto:
 
 Versione 0.3. Le regole portanti sono state verificate il 24/08/2026 leggendo il
 **testo letterale** delle norme: TUIR artt. 44 c.1 lett. g), 45 c.1, 67 c.1
-lett. c-bis)/c-ter)/c-quinquies), 68 c.5 (testo ufficiale Agenzia delle Entrate)
-e DL 66/2014 art. 3 commi 1 e 5 (Normattiva). Ogni caso di test porta la norma
-in `fonte` e `articolo`.
+lett. c-bis)/c-ter)/c-quinquies), 68 c.5 (testo ufficiale Agenzia delle Entrate),
+DL 66/2014 art. 3 commi 1 e 5 (Normattiva) e Circolare Agenzia delle Entrate
+19/E del 27/06/2014 per il trattamento della componente in titoli pubblici degli
+OICR. Ogni caso verificato porta la norma/prassi in `fonte` e `articolo`.
 
-Restano **tre assunzioni non verificate**, che `run_tests.py` elenca a ogni
-esecuzione: il meccanismo della quota agevolata negli OICR, la qualificazione
-di ETC/ETN e la deducibilità degli oneri di negoziazione. Vanno confermate prima
-di usare il motore su un patrimonio reale.
+Restano **due assunzioni non verificate nel test suite**, che `run_tests.py`
+elenca a ogni esecuzione: la qualificazione di ETC/ETN e la deducibilità degli
+oneri di negoziazione. Vanno confermate prima di usare quelle specifiche regole
+su un patrimonio reale.
 
 Nota di vigenza: il D.Lgs. 117/2026 ha riordinato le imposte sui redditi in un
 nuovo testo unico, applicabile dal **1° gennaio 2027**, che sostituisce il
