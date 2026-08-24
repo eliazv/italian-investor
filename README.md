@@ -5,9 +5,10 @@
 **Italian Investor** è una [Agent Skill](https://code.claude.com/docs/en/skills)
 open source che permette a Claude (e ad altri agenti compatibili) di analizzare
 il portafoglio di un **residente fiscale italiano** senza allucinare sulla
-fiscalità: tassazione di ETF, azioni, BTP, obbligazioni, ETC/ETN e certificates,
+fiscalità: tassazione di ETF/OICR, azioni, BTP, obbligazioni e certificates,
 compensazione delle minusvalenze e **zainetto fiscale**, ribilanciamento
-tax-aware, successione.
+tax-aware, successione. ETC/ETN e altri strumenti che richiedono una verifica
+specifica vengono riconosciuti ma **non classificati fiscalmente per analogia**.
 
 La differenza rispetto a un prompt "sei un consulente finanziario italiano": qui
 la fiscalità non è memorizzata nel modello, è **una procedura di verifica su
@@ -28,9 +29,11 @@ italiano, perché ragionano con schemi anglosassoni:
 - comprimono la successione in una frase sola, confondendo imposta di
   successione, costo fiscale dell'erede e plusvalenza maturata dal defunto;
 - confondono la valuta di quotazione di un ETF con l'esposizione valutaria dei
-  sottostanti.
+  sottostanti;
+- applicano per analogia la fiscalità degli ETF a ETC/ETN, mentre per questi
+  strumenti va verificata la sezione fiscale del prospetto del singolo prodotto.
 
-Questa skill blocca esattamente questi errori: li ha come **casi di test**.
+Questa skill blocca questi errori con **regole di stop** e casi di test.
 
 ## Installazione
 
@@ -80,16 +83,19 @@ python skills/italian-investor/tests/run_tests.py
 No. Il provento positivo di un OICR/ETF è **reddito di capitale**, mentre le
 minusvalenze in zainetto sono **redditi diversi**: non si incontrano. Vale il
 contrario, invece, per la minusvalenza realizzata vendendo un ETF in perdita,
-che alimenta lo zainetto. Il motore lo rende esplicito: chiedendo la vendita di
-un ETF in gain con 5.000 € di minus disponibili restituisce
-`minusvalenze_utilizzate: 0` e un avviso.
+che alimenta lo zainetto nei limiti fiscalmente rilevanti. Il motore lo rende
+esplicito: chiedendo la vendita di un ETF in gain con 5.000 € di minus
+disponibili restituisce `minusvalenze_utilizzate: 0` e un avviso.
 
 ### Che cosa compensa le minusvalenze in zainetto?
 
-I redditi diversi di natura finanziaria: capital gain da **azioni,
-obbligazioni singole, ETC/ETN, certificates**, valute e derivati. Le
-minusvalenze sono utilizzabili entro il quarto anno successivo a quello di
-realizzo e, in regime amministrato, lo zainetto è **per singolo intermediario**.
+I redditi diversi di natura finanziaria, ad esempio capital gain da **azioni,
+obbligazioni singole e certificates**, oltre agli altri strumenti che ricadono
+nelle fattispecie previste dal TUIR. Per ETC/ETN il motore non assume una
+classificazione generica: richiede la verifica della sezione `Taxation in Italy`
+del prospetto del singolo strumento. Le minusvalenze sono utilizzabili entro il
+quarto anno successivo a quello di realizzo e, in regime amministrato, lo
+zainetto è **per singolo intermediario**.
 
 ### Un ETF su titoli di Stato è tassato al 12,5%?
 
@@ -136,11 +142,10 @@ impone di trattarli separatamente e di citare la norma per ciascuno.
 
 La skill non risponde d'istinto: confronta quattro strategie con i numeri —
 ribilanciamento immediato, solo nuovi versamenti, parziale, tax-aware — su
-imposta stimata, controvalore venduto, drift residuo e tempo. Sul portafoglio di
-esempio la strategia tax-aware costa 390 € contro 777 € di quella immediata. Il
-drift residuo è calcolato **al netto delle imposte**: l'imposta esce dal
-portafoglio, quindi si reinveste meno di quanto si è venduto e il target non
-viene centrato esattamente.
+imposta stimata, controvalore venduto, drift residuo e tempo. Il drift residuo è
+calcolato **al netto delle imposte**: l'imposta esce dal portafoglio, quindi si
+reinveste meno di quanto si è venduto e il target non viene centrato
+necessariamente al centesimo.
 
 ## Come funziona
 
@@ -151,7 +156,7 @@ references/fiscalita.md        schema di ragionamento fiscale, incl. successione
 references/regole-correnti.md  i numeri che cambiano, con data di verifica
 scripts/tax_engine.py          classificazione strumenti e simulazione vendite
 scripts/portfolio.py           metriche, esposizioni, strategie di ribilanciamento
-tests/                         20 casi fiscali/comportamentali, eseguiti in CI
+tests/                         casi fiscali/comportamentali, eseguiti in CI
 ```
 
 Principi:
@@ -160,11 +165,11 @@ Principi:
    compensazioni e successione vanno verificate su fonte corrente; se la fonte
    manca, la risposta è `NON VERIFICATO` e la conclusione si blocca.
 2. **Mai inventare dati di prodotto.** ISIN, TER, duration, rating,
-   composizione, quota agevolata: si recuperano dal KID o si chiedono.
+   composizione, quota agevolata: si recuperano dal KID/prospetto o si chiedono.
 3. **Calcoli in Python, non a mente.** Deterministici, testati, ripetibili.
-4. **Rifiuto esplicito quando non si può calcolare.** Cripto, ETF non
-   armonizzati, fondi pensione e PIR sono riconosciuti ma non calcolati: il
-   motore si ferma e chiede verifica.
+4. **Rifiuto esplicito quando non si può calcolare.** ETC/ETN senza verifica del
+   prospetto, cripto, ETF non armonizzati, fondi pensione e PIR sono riconosciuti
+   ma non calcolati automaticamente.
 5. **Claim audit finale.** Ogni affermazione etichettata come dato, legge,
    calcolo o opinione, con fonte e livello di confidenza.
 6. **Revisione avversariale.** Un secondo passaggio cerca attivamente errori
@@ -179,7 +184,7 @@ consigliate: `valuta_esposizione, area, settore, broker, quota_stato`.
 - `tipo`: `etf`, `oicr`, `azione`, `obbligazione`, `titolo_stato`, `etc_etn`,
   `certificate`, `liquidita`. È un dato dichiarato in input: prima di usare il
   risultato fiscale va verificato che sia coerente con la natura giuridica
-  ricavata dall'ISIN/KID.
+  ricavata dall'ISIN/KID/prospetto.
 - Obbligazioni: `quantita` = valore nominale, `pmc`/`prezzo` in frazione
   (corso 101,30 → `1.0130`).
 - `valuta_esposizione`: la valuta dei **sottostanti**, non quella di quotazione.
@@ -190,17 +195,16 @@ Esempio pronto:
 
 ## Stato e limiti
 
-Versione 0.3. Le regole portanti sono state verificate il 24/08/2026 leggendo il
-**testo letterale** delle norme: TUIR artt. 44 c.1 lett. g), 45 c.1, 67 c.1
-lett. c-bis)/c-ter)/c-quinquies), 68 c.5 (testo ufficiale Agenzia delle Entrate),
-DL 66/2014 art. 3 commi 1 e 5 (Normattiva) e Circolare Agenzia delle Entrate
-19/E del 27/06/2014 per il trattamento della componente in titoli pubblici degli
-OICR. Ogni caso verificato porta la norma/prassi in `fonte` e `articolo`.
+Versione 0.3. Le regole implementate nei casi **normativi** sono accompagnate da
+`fonte`, `articolo` e `verificato_il`, e la CI fallisce se uno di questi metadati
+manca. Tra le fonti già verificate al 24/08/2026: TUIR artt. 44, 45, 67 e 68,
+DL 66/2014 art. 3 e Circolare Agenzia delle Entrate 19/E del 27/06/2014.
 
-Restano **due assunzioni non verificate nel test suite**, che `run_tests.py`
-elenca a ogni esecuzione: la qualificazione di ETC/ETN e la deducibilità degli
-oneri di negoziazione. Vanno confermate prima di usare quelle specifiche regole
-su un patrimonio reale.
+Le commissioni d'intermediazione sono trattate come oneri inerenti in base
+all'art. 68 c.6, come confermato anche dalle istruzioni 2026 dell'Agenzia delle
+Entrate. Gli strumenti per cui non esiste una regola generica sufficientemente
+solida — per esempio ETC/ETN senza il relativo prospetto — vengono **bloccati**
+invece di essere classificati per analogia.
 
 Nota di vigenza: il D.Lgs. 117/2026 ha riordinato le imposte sui redditi in un
 nuovo testo unico, applicabile dal **1° gennaio 2027**, che sostituisce il
@@ -217,10 +221,10 @@ Convenzioni del repo (bump di `version` a ogni release, test obbligatori, niente
 regole fiscali senza fonte) in [CLAUDE.md](CLAUDE.md).
 
 Il contributo più utile è un **caso fiscale**: aggiungi una voce a
-`skills/italian-investor/tests/casi_fiscali.json` con il risultato atteso e la
-fonte nel campo `perche`, poi verifica che
-`python skills/italian-investor/tests/run_tests.py` passi. Correzioni normative
-sono benvenute purché accompagnate da una fonte Tier 1 o 2.
+`skills/italian-investor/tests/casi_fiscali.json` con risultato atteso, fonte,
+articolo e data di verifica, poi esegui
+`python skills/italian-investor/tests/run_tests.py`. Correzioni normative sono
+benvenute purché accompagnate da una fonte Tier 1 o 2.
 
 ## Licenza
 
