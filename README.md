@@ -180,12 +180,16 @@ Esempio pronto:
 
 ## Stato e limiti
 
-Versione 0.2. Una sola regola è oggi verificata su fonte primaria (il computo al
-48,08% dei redditi diversi da titoli pubblici, DL 66/2014 art. 3 c. 5, testo
-letto su Normattiva il 24/08/2026). Tutte le altre sono **assunzioni**: i test le
-verificano contro il codice, non contro la legge, e `run_tests.py` elenca
-esplicitamente quali casi non hanno ancora una verifica. Vanno confermate su
-fonte primaria prima di ogni uso reale.
+Versione 0.3. Le regole portanti sono state verificate il 24/08/2026 leggendo il
+**testo letterale** delle norme: TUIR artt. 44 c.1 lett. g), 45 c.1, 67 c.1
+lett. c-bis)/c-ter)/c-quinquies), 68 c.5 (testo ufficiale Agenzia delle Entrate)
+e DL 66/2014 art. 3 commi 1 e 5 (Normattiva). Ogni caso di test porta la norma
+in `fonte` e `articolo`.
+
+Restano **tre assunzioni non verificate**, che `run_tests.py` elenca a ogni
+esecuzione: il meccanismo della quota agevolata negli OICR, la qualificazione
+di ETC/ETN e la deducibilità degli oneri di negoziazione. Vanno confermate prima
+di usare il motore su un patrimonio reale.
 
 Nota di vigenza: il D.Lgs. 117/2026 ha riordinato le imposte sui redditi in un
 nuovo testo unico, applicabile dal **1° gennaio 2027**, che sostituisce il

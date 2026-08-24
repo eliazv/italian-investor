@@ -22,6 +22,40 @@ commerciale ("ETF governativo", "obbligazionario") non determina nulla.
 Il TUIR distingue **redditi di capitale** (art. 44 e segg.) e **redditi
 diversi** di natura finanziaria (art. 67-68).
 
+Testo verificato il 24/08/2026 sul TUIR ufficiale pubblicato dall'Agenzia delle
+Entrate:
+
+- **art. 44 c.1 lett. g)**: sono redditi di capitale «i proventi derivanti dalla
+  gestione, nell'interesse collettivo di pluralita' di soggetti, di masse
+  patrimoniali costituite con somme di denaro e beni affidati da terzi o
+  provenienti dai relativi investimenti».
+- **art. 45 c.1**: nei redditi di cui alla lett. g) «e' compresa anche la
+  differenza tra la somma percepita o il valore normale dei beni ricevuti alla
+  scadenza e il prezzo di emissione o la somma impiegata, apportata o affidata
+  in gestione». E' qui che il **guadagno** su un OICR diventa reddito di
+  capitale.
+- **art. 67 c.1 lett. c-ter)**: sono redditi diversi le plusvalenze realizzate
+  «mediante cessione a titolo oneroso ovvero rimborso di titoli non
+  rappresentativi di merci, di certificati di massa, di valute estere [...] e di
+  quote di partecipazione ad organismi d'investimento collettivo».
+- **art. 68 c.5**: le plusvalenze delle lett. c-bis) e c-ter) «sono sommate
+  algebricamente alle relative minusvalenze, nonche' ai redditi ed alle perdite
+  di cui alla lettera c-quater) e alle plusvalenze ed altri proventi di cui alla
+  lettera c-quinquies)»; l'eccedenza negativa «puo' essere portata in deduzione,
+  fino a concorrenza, dalle plusvalenze e dagli altri redditi dei periodi
+  d'imposta successivi **ma non oltre il quarto**, a condizione che sia indicata
+  nella dichiarazione dei redditi relativa al periodo d'imposta» di realizzo.
+
+Messi in fila: la compensazione dell'art. 68 c.5 opera **solo** tra le lettere
+c-bis), c-ter), c-quater) e c-quinquies) dell'art. 67, cioe' tra redditi
+diversi. Il guadagno su un OICR non e' li' dentro: e' reddito di capitale per
+gli artt. 44 e 45. Ecco perche' lo zainetto non lo tocca, mentre la perdita
+sullo stesso ETF rientra nella lett. c-ter) e lo alimenta.
+
+L'aliquota ordinaria del 26% e' fissata dall'art. 3 c.1 del DL 66/2014, in
+vigore dal 1o luglio 2014, e si applica sia ai redditi di capitale dell'art. 44
+sia ai redditi diversi dell'art. 67 c.1 lett. da c-bis) a c-quinquies).
+
 > Nota di vigenza: dal 1° gennaio 2027 si applica il nuovo testo unico
 > (D.Lgs. 117/2026) e la numerazione degli articoli cambia. Verifica quale
 > testo si applica al periodo d'imposta del caso prima di citare un articolo.
@@ -50,8 +84,9 @@ concorrere alla formazione del reddito complessivo.
 
 ## Zainetto fiscale
 
-- Le minusvalenze sono utilizzabili entro il **quarto anno successivo** a
-  quello di realizzo.
+- Le minusvalenze sono utilizzabili entro il **quarto** periodo d'imposta
+  successivo a quello di realizzo (art. 68 c.5, verificato il 24/08/2026), a
+  condizione che siano indicate nella dichiarazione dell'anno di realizzo.
 - L'utilizzo avviene su redditi diversi positivi, non su redditi di capitale.
 - In regime amministrato lo zainetto è **per singolo intermediario**: minus
   presso il broker A non compensano plus presso il broker B senza trasferimento

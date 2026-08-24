@@ -54,7 +54,8 @@ def main():
 
     falliti, senza_fonte = 0, []
     for caso in casi:
-        if not caso.get("verificato_il"):
+        if (caso.get("tipo_caso", "normativo") == "normativo"
+                and not caso.get("verificato_il")):
             senza_fonte.append(caso["nome"])
         errori = esegui(caso)
         if errori:

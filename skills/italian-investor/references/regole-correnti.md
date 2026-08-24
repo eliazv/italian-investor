@@ -1,6 +1,7 @@
 # Regole correnti (snapshot da riverificare)
 
-> **Verifica parziale: solo la riga sui titoli pubblici agevolati.** I valori qui sotto sono un punto di partenza per
+> **Verifica parziale.** Le righe con data in "verificato il" sono state lette
+> sul testo ufficiale; le altre restano assunzioni. I valori qui sotto sono un punto di partenza per
 > la ricerca, **non** una fonte. Prima di usarne uno in un'analisi, verificalo
 > secondo [fonti.md](fonti.md) e aggiorna la colonna "verificato il".
 > Se non riesci a verificarlo, riporta `NON VERIFICATO` nell'output.
@@ -9,7 +10,7 @@
 
 | Voce | Valore di riferimento | Verificato il | Fonte |
 | --- | --- | --- | --- |
-| Aliquota ordinaria redditi finanziari | 26% | — | — |
+| Aliquota ordinaria redditi finanziari | 26% dal 01/07/2014, su redditi di capitale (art. 44 TUIR) e redditi diversi (art. 67 c.1 lett. c-bis...c-quinquies) | 24/08/2026 | DL 66/2014 art. 3 c.1, Normattiva |
 | Titoli di Stato IT / White List / enti assimilati | redditi diversi computati al 48,08% dell'ammontare realizzato, poi 26%: effettivo 12,5008%. La riduzione precede la compensazione e vale anche per le perdite | 24/08/2026 | DL 66/2014 art. 3 c. 5, Normattiva (testo verificato verbatim) |
 | Quota agevolata di un OICR | dipende dal singolo fondo, comunicata dall'emittente | — | — |
 | Imposta di bollo dossier titoli | 0,2% annuo del controvalore | — | — |
@@ -20,7 +21,7 @@
 
 | Voce | Valore di riferimento | Verificato il | Fonte |
 | --- | --- | --- | --- |
-| Utilizzo minusvalenze | entro il 4° anno successivo al realizzo | — | — |
+| Utilizzo minusvalenze | deduzione dell'eccedenza nei periodi d'imposta successivi «ma non oltre il quarto», se indicata in dichiarazione | 24/08/2026 | TUIR art. 68 c.5, testo ufficiale Agenzia delle Entrate |
 | Franchigia successione coniuge / parenti in linea retta | 1.000.000 € per erede | — | — |
 | Aliquote successione | variabili per grado di parentela | — | — |
 
