@@ -1,6 +1,6 @@
 # Regole correnti (snapshot da riverificare)
 
-> **Ultima verifica: nessuna.** I valori qui sotto sono un punto di partenza per
+> **Verifica parziale: solo la riga sui titoli pubblici agevolati.** I valori qui sotto sono un punto di partenza per
 > la ricerca, **non** una fonte. Prima di usarne uno in un'analisi, verificalo
 > secondo [fonti.md](fonti.md) e aggiorna la colonna "verificato il".
 > Se non riesci a verificarlo, riporta `NON VERIFICATO` nell'output.
@@ -10,7 +10,7 @@
 | Voce | Valore di riferimento | Verificato il | Fonte |
 | --- | --- | --- | --- |
 | Aliquota ordinaria redditi finanziari | 26% | — | — |
-| Titoli di Stato IT / White List / enti assimilati | imposizione effettiva 12,5% (26% su frazione imponibile 48,08%) | — | — |
+| Titoli di Stato IT / White List / enti assimilati | redditi diversi computati al 48,08% dell'ammontare realizzato, poi 26%: effettivo 12,5008%. La riduzione precede la compensazione e vale anche per le perdite | 24/08/2026 | DL 66/2014 art. 3 c. 5, Normattiva (testo verificato verbatim) |
 | Quota agevolata di un OICR | dipende dal singolo fondo, comunicata dall'emittente | — | — |
 | Imposta di bollo dossier titoli | 0,2% annuo del controvalore | — | — |
 | IVAFE (attività estere) | 0,2% annuo, aliquota maggiorata per prodotti in Stati non collaborativi | — | — |

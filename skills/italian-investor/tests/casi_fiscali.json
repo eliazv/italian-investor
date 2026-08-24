@@ -2,18 +2,36 @@
   {
     "nome": "ETF in gain: le minus in zainetto NON si compensano",
     "perche": "La plusvalenza da OICR e' reddito di capitale. E' l'errore tipico del modello.",
-    "input": {"tipo": "etf", "pmc": 90, "prezzo": 120, "quantita": 100, "minus_disponibili": 5000},
+    "fonte": "TUIR art. 44 (DPR 917/1986) - Normattiva",
+    "verificato_il": null,
+    "input": {"tipo": "etf", "pmc": 90, "prezzo": 120, "quantita": 100, "minus_disponibili": 5000, "quota_stato": 0},
     "atteso": {"categoria_reddito": "reddito_di_capitale", "minusvalenze_utilizzate": 0.0, "imposta_stimata": 780.0}
+  },
+  {
+    "nome": "ETF in gain con quota_stato non fornita: nessun importo singolo, solo scenario",
+    "perche": "Con la quota agevolata ignota un importo puntuale sarebbe falsamente preciso.",
+    "input": {"tipo": "etf", "pmc": 90, "prezzo": 120, "quantita": 100, "minus_disponibili": 0},
+    "atteso": {"imposta_stimata": null, "dato_mancante": "quota_stato", "imposta_scenario.quota_agevolata_0": 780.0, "imposta_scenario.quota_agevolata_100": 375.02, "verificare_contiene": "NON FORNITA"}
   },
   {
     "nome": "ETF in perdita: genera minusvalenza in zainetto",
     "perche": "La differenza negativa da OICR e' reddito diverso.",
+    "fonte": "TUIR art. 67-68 (DPR 917/1986) - Normattiva",
+    "verificato_il": null,
     "input": {"tipo": "etf", "pmc": 100, "prezzo": 80, "quantita": 50, "minus_disponibili": 0},
     "atteso": {"categoria_reddito": "reddito_diverso", "imposta_stimata": 0.0, "minusvalenza_generata": 1000.0}
   },
   {
+    "nome": "ETF governativo al 50% in perdita: la riduzione della quota NON e' verificata",
+    "perche": "La perdita e' indicata al lordo, ma il motore deve dichiarare che la quota riferibile a titoli pubblici potrebbe rilevare in misura ridotta. Prassi non reperita: non si implementa una regola non verificata.",
+    "input": {"tipo": "etf", "pmc": 100, "prezzo": 90, "quantita": 100, "minus_disponibili": 0, "quota_stato": 0.5},
+    "atteso": {"minusvalenza_generata": 1000.0, "verificare_contiene": "NON VERIFICATO"}
+  },
+  {
     "nome": "Azione in gain: la minus si compensa",
     "perche": "Il capital gain azionario e' reddito diverso.",
+    "fonte": "TUIR art. 67-68 (DPR 917/1986) - Normattiva",
+    "verificato_il": null,
     "input": {"tipo": "azione", "pmc": 100, "prezzo": 150, "quantita": 100, "minus_disponibili": 2000},
     "atteso": {"categoria_reddito": "reddito_diverso", "minusvalenze_utilizzate": 2000.0, "imposta_stimata": 780.0}
   },
@@ -23,15 +41,30 @@
     "atteso": {"minusvalenze_utilizzate": 1000.0, "imposta_stimata": 0.0, "zainetto_residuo": 4000.0}
   },
   {
-    "nome": "BTP in gain: imposizione effettiva 12,5%",
-    "perche": "L'aliquota ridotta si ottiene applicando il 26% al 48,08% della base: il risultato e' 12,5008%, non esattamente 12,5%.",
+    "nome": "BTP in gain: il reddito diverso e' computato al 48,08%",
+    "perche": "L'aliquota effettiva 12,5008% si ottiene computando il reddito diverso al 48,08% e applicando il 26%.",
+    "fonte": "DL 66/2014 art. 3 c. 5 - Normattiva (testo verificato verbatim)",
+    "articolo": "art. 3 comma 5 lett. a) b) c), che modifica artt. 5, 6, 7 D.Lgs. 461/1997",
+    "verificato_il": "2026-08-24",
     "input": {"tipo": "titolo_stato", "pmc": 0.95, "prezzo": 1.0, "quantita": 20000, "minus_disponibili": 0},
-    "atteso": {"quota_agevolata_applicata": 1.0, "imposta_stimata": 125.01}
+    "atteso": {"reddito_diverso_rilevante": 480.8, "imposta_stimata": 125.01}
   },
   {
-    "nome": "BTP in gain con minus: prima compensa, poi aliquota ridotta",
+    "nome": "BTP in gain con minus: prima si computa il 48,08%, POI si compensa",
+    "perche": "Ordine invertito rispetto alla prima implementazione: la norma riduce il reddito diverso, non la base dopo compensazione. Compensare sul lordo sprecherebbe minusvalenze e sovrastimerebbe l'imposta.",
+    "fonte": "DL 66/2014 art. 3 c. 5 - Normattiva (testo verificato verbatim)",
+    "articolo": "art. 3 comma 5: 'i redditi diversi ... sono computati nella misura del 48,08 per cento dell'ammontare realizzato'",
+    "verificato_il": "2026-08-24",
     "input": {"tipo": "titolo_stato", "pmc": 0.95, "prezzo": 1.0, "quantita": 20000, "minus_disponibili": 400},
-    "atteso": {"minusvalenze_utilizzate": 400.0, "imponibile": 600.0, "imposta_stimata": 75.0}
+    "atteso": {"reddito_diverso_rilevante": 480.8, "minusvalenze_utilizzate": 400.0, "imponibile": 80.8, "imposta_stimata": 21.01}
+  },
+  {
+    "nome": "BTP in perdita: la minusvalenza entra in zainetto al 48,08%",
+    "perche": "La riduzione vale per i redditi diversi, quindi anche per le perdite: mettere il 100% nello zainetto sovrastimerebbe le minus utilizzabili.",
+    "fonte": "DL 66/2014 art. 3 c. 5 - Normattiva (testo verificato verbatim)",
+    "verificato_il": "2026-08-24",
+    "input": {"tipo": "titolo_stato", "pmc": 1.0, "prezzo": 0.95, "quantita": 20000, "minus_disponibili": 0},
+    "atteso": {"imposta_stimata": 0.0, "minusvalenza_generata": 480.8, "zainetto_dopo": 480.8}
   },
   {
     "nome": "Obbligazione corporate in gain: 26% pieno, compensabile",
@@ -40,7 +73,7 @@
   },
   {
     "nome": "ETF con quota titoli di Stato al 50%: aliquota mista",
-    "perche": "Non esiste 'ETF governativo = 12,5%': conta la quota comunicata dall'emittente.",
+    "perche": "Non esiste 'ETF governativo = 12,5%': conta la quota comunicata dall'emittente. Meccanismo diverso dai titoli pubblici detenuti direttamente: qui il provento e' reddito di capitale.",
     "input": {"tipo": "etf", "pmc": 100, "prezzo": 110, "quantita": 100, "minus_disponibili": 0, "quota_stato": 0.5},
     "atteso": {"quota_agevolata_applicata": 0.5, "imposta_stimata": 192.5}
   },
@@ -74,11 +107,6 @@
     "nome": "Commissioni: riducono il risultato imponibile",
     "input": {"tipo": "azione", "pmc": 100, "prezzo": 110, "quantita": 100, "minus_disponibili": 0, "costi": 100},
     "atteso": {"risultato_lordo": 900.0, "imposta_stimata": 234.0}
-  },
-  {
-    "nome": "ETF in gain senza quota_stato: deve segnalare il dato mancante",
-    "input": {"tipo": "etf", "pmc": 100, "prezzo": 120, "quantita": 10, "minus_disponibili": 0},
-    "atteso": {"verificare_contiene": "Quota di titoli di Stato"}
   },
   {
     "nome": "ETF in gain con minus: deve avvisare che non sono utilizzabili",

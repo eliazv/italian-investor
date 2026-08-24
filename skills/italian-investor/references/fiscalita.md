@@ -61,6 +61,29 @@ concorrere alla formazione del reddito complessivo.
 Non trasformare mai il recupero delle minus in una raccomandazione d'acquisto.
 È un vincolo da considerare, non un obiettivo di investimento.
 
+## Titoli pubblici agevolati: il 48,08% viene PRIMA della compensazione
+
+Regola verificata il 24/08/2026 sul testo di Normattiva.
+
+L'art. 3 c. 5 del DL 66/2014 (che sostituisce l'ultimo periodo degli artt. 5, 6
+e 7 del D.Lgs. 461/1997, cioe' regime dichiarativo, amministrato e gestito)
+dispone che «i redditi diversi derivanti dalle obbligazioni e dagli altri titoli
+di cui all'articolo 31 del DPR 601/1973 ed equiparati e dalle obbligazioni
+emesse dagli Stati inclusi nella lista [White List] ... **sono computati nella
+misura del 48,08 per cento dell'ammontare realizzato**».
+
+Conseguenze operative, entrambe facili da sbagliare:
+
+1. **La riduzione precede la compensazione.** Su 1.000 EUR di plusvalenza da BTP
+   con 400 EUR di minusvalenze in zainetto: il reddito diverso e' 480,80 EUR,
+   da cui si sottraggono le minus, quindi imponibile 80,80 EUR e imposta
+   21,01 EUR. Compensare prima e ridurre dopo darebbe 75 EUR: sovrastima
+   l'imposta e spreca minusvalenze.
+2. **Vale anche per le perdite.** Una minusvalenza di 1.000 EUR su un titolo
+   pubblico agevolato entra in zainetto per 480,80 EUR, non per 1.000.
+
+Attenzione a non estendere questa regola agli OICR: e' un meccanismo diverso.
+
 ## ETF con componente in titoli di Stato
 
 Non esiste "ETF governativo = 12,5%". Il meccanismo è: la quota di provento
@@ -69,8 +92,16 @@ beneficia di un'imposizione effettiva ridotta, ottenuta applicando l'aliquota
 ordinaria a una **frazione** della base imponibile.
 
 Conseguenza operativa: serve la **percentuale agevolata comunicata
-dall'emittente o applicata dall'intermediario**. Se non ce l'hai, non stimarla:
-calcola lo scenario a 0% agevolato e dichiara il dato come mancante.
+dall'emittente o applicata dall'intermediario**. Se non ce l'hai, non stimarla e
+non produrre un importo puntuale: il motore restituisce un **intervallo**
+(imposta con quota 0% e con quota 100%) e marca `dato_mancante`. Riporta
+l'intervallo, mai uno dei due estremi come se fosse il risultato.
+
+Sulle **perdite** di un OICR con componente governativa il motore non applica
+alcuna riduzione e segnala `NON VERIFICATO`: non e' stata reperita una fonte
+primaria che confermi la riduzione della quota deducibile, e una regola non
+verificata non si implementa. L'importo va quindi trattato come limite
+superiore.
 
 ## Regimi
 

@@ -11,6 +11,9 @@ e `.claude-plugin/marketplace.json`, e i due valori devono restare allineati.
 Chi ha installato il plugin riceve gli aggiornamenti **solo** se questo campo
 cambia: senza bump, la modifica non arriva a nessuno.
 
+La CI in `.github/workflows/tests.yml` verifica anche che le due `version` siano
+allineate, ma non puo' accorgersi di un bump mancato: quello resta a te.
+
 **Esegui i test prima di committare.**
 
 ```bash

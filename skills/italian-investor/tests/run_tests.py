@@ -22,7 +22,7 @@ def esegui(caso):
     i = caso["input"]
     res = simula_vendita(i["tipo"], i["pmc"], i["prezzo"], i["quantita"],
                          i.get("minus_disponibili", 0.0),
-                         i.get("quota_stato", 0.0),
+                         i.get("quota_stato"),
                          i.get("costi", 0.0))
     errori = []
     for chiave, atteso in caso["atteso"].items():
@@ -34,7 +34,9 @@ def esegui(caso):
             if not any(atteso in v for v in res.get("verificare", [])):
                 errori.append("avviso mancante: %r" % atteso)
             continue
-        ottenuto = res.get(chiave)
+        ottenuto = res
+        for parte in chiave.split("."):
+            ottenuto = ottenuto.get(parte) if isinstance(ottenuto, dict) else None
         if atteso is None:
             if ottenuto is not None:
                 errori.append("%s: atteso null, ottenuto %r" % (chiave, ottenuto))
@@ -50,8 +52,10 @@ def main():
     with open(os.path.join(BASE, "tests", "casi_fiscali.json"), encoding="utf-8") as f:
         casi = json.load(f)
 
-    falliti = 0
+    falliti, senza_fonte = 0, []
     for caso in casi:
+        if not caso.get("verificato_il"):
+            senza_fonte.append(caso["nome"])
         errori = esegui(caso)
         if errori:
             falliti += 1
@@ -62,6 +66,13 @@ def main():
             print("ok    %s" % caso["nome"])
 
     print("\n%d casi, %d falliti" % (len(casi), falliti))
+    if senza_fonte:
+        print("\n%d casi non ancora verificati su fonte primaria "
+              "(campo verificato_il vuoto):" % len(senza_fonte))
+        for nome in senza_fonte:
+            print("      %s" % nome)
+        print("Non fanno fallire i test: sono assunzioni, da verificare prima di usare "
+              "il motore su un patrimonio reale.")
     return 1 if falliti else 0
 
 

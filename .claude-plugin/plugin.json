@@ -1,12 +1,14 @@
 {
   "name": "italian-investor",
   "description": "Analisi di portafoglio tax-aware per investitori italiani: fiscalita di ETF, azioni, BTP, obbligazioni e certificates, compensazione minusvalenze, ribilanciamento e successione, con verifica obbligatoria su fonti normative primarie.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "author": {
     "name": "Elia Zavatta",
     "url": "https://github.com/eliazv"
   },
   "homepage": "https://github.com/eliazv/italian-investor",
   "license": "MIT",
-  "skills": ["./skills/italian-investor"]
+  "skills": [
+    "./skills/italian-investor"
+  ]
 }

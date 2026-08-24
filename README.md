@@ -1,5 +1,7 @@
 # Italian Investor — Claude Skill per l'analisi di portafoglio e la fiscalità italiana
 
+[![test](https://github.com/eliazv/italian-investor/actions/workflows/tests.yml/badge.svg)](https://github.com/eliazv/italian-investor/actions/workflows/tests.yml)
+
 **Italian Investor** è una [Agent Skill](https://code.claude.com/docs/en/skills)
 open source che permette a Claude (e ad altri agenti compatibili) di analizzare
 il portafoglio di un **residente fiscale italiano** senza allucinare sulla
@@ -94,13 +96,24 @@ realizzo e, in regime amministrato, lo zainetto è **per singolo intermediario**
 Non automaticamente. L'imposizione ridotta si applica alla **quota di provento
 riferibile a titoli pubblici italiani, White List ed enti assimilati**,
 comunicata dall'emittente o applicata dall'intermediario. Se il dato manca, la
-skill calcola con quota agevolata 0% e dichiara il dato come mancante, invece di
-stimarlo.
+skill non produce un importo singolo: restituisce un **intervallo** (imposta con
+quota 0% e con quota 100%), marca `dato_mancante` e chiede la percentuale, invece
+di stimarla.
 
 ### Perché l'aliquota agevolata dà 12,5008% e non 12,5%?
 
-Perché si ottiene applicando il 26% al 48,08% della base imponibile. Su 1.000 €
-di plusvalenza l'imposta è 125,01 €, non 125,00 €. È uno dei casi di test.
+Perché si ottiene computando il reddito diverso nella misura del 48,08%
+dell'ammontare realizzato e applicando poi il 26%. Su 1.000 € di plusvalenza
+l'imposta è 125,01 €, non 125,00 €.
+
+### Le minusvalenze si sottraggono prima o dopo il 48,08%?
+
+Dopo. L'art. 3 c. 5 del DL 66/2014 riduce il **reddito diverso**, quindi la
+compensazione con lo zainetto avviene su un importo già ridotto: 1.000 € di gain
+su BTP con 400 € di minus fanno 480,80 − 400 = 80,80 € imponibili, cioè 21,01 €
+di imposta. Compensare prima e ridurre dopo darebbe 75 € — sovrastima l'imposta e
+spreca minusvalenze. Per lo stesso motivo una perdita di 1.000 € su un titolo
+pubblico agevolato entra in zainetto per 480,80 €, non per 1.000 €.
 
 ### Che cosa succede fiscalmente in successione?
 
@@ -116,8 +129,10 @@ impone di trattarli separatamente e di citare la norma per ciascuno.
 La skill non risponde d'istinto: confronta quattro strategie con i numeri —
 ribilanciamento immediato, solo nuovi versamenti, parziale, tax-aware — su
 imposta stimata, controvalore venduto, drift residuo e tempo. Sul portafoglio di
-esempio la strategia tax-aware costa 390 € contro 777 € di quella immediata, a
-parità di allocazione finale.
+esempio la strategia tax-aware costa 390 € contro 777 € di quella immediata. Il
+drift residuo è calcolato **al netto delle imposte**: l'imposta esce dal
+portafoglio, quindi si reinveste meno di quanto si è venduto e il target non
+viene centrato esattamente.
 
 ## Come funziona
 
@@ -128,7 +143,7 @@ references/fiscalita.md        schema di ragionamento fiscale, incl. successione
 references/regole-correnti.md  i numeri che cambiano, con data di verifica
 scripts/tax_engine.py          classificazione strumenti e simulazione vendite
 scripts/portfolio.py           metriche, esposizioni, strategie di ribilanciamento
-tests/                         16 casi fiscali di regressione
+tests/                         18 casi fiscali di regressione, eseguiti in CI
 ```
 
 Principi:
@@ -165,9 +180,12 @@ Esempio pronto:
 
 ## Stato e limiti
 
-Versione 0.1. Le aliquote presenti nel codice sono **valori di riferimento non
-verificati**: vanno confermati su fonte primaria prima di ogni uso reale, ed è
-esattamente ciò che la skill impone di fare.
+Versione 0.2. Una sola regola è oggi verificata su fonte primaria (il computo al
+48,08% dei redditi diversi da titoli pubblici, DL 66/2014 art. 3 c. 5, testo
+letto su Normattiva il 24/08/2026). Tutte le altre sono **assunzioni**: i test le
+verificano contro il codice, non contro la legge, e `run_tests.py` elenca
+esplicitamente quali casi non hanno ancora una verifica. Vanno confermate su
+fonte primaria prima di ogni uso reale.
 
 Nota di vigenza: il D.Lgs. 117/2026 ha riordinato le imposte sui redditi in un
 nuovo testo unico, applicabile dal **1° gennaio 2027**, che sostituisce il

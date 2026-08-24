@@ -59,6 +59,9 @@ FONTI_DA_CITARE = [
     "https://www.normattiva.it/uri-res/N2Ls?urn:nir:stato:"
     "decreto.del.presidente.della.repubblica:1986-12-22;917",
     "TUIR art. 67-68 (redditi diversi, minusvalenze) - DPR 917/1986, Normattiva",
+    "DL 66/2014 art. 3 c. 5 (redditi diversi da titoli pubblici computati al 48,08%) - "
+    "Normattiva: https://www.normattiva.it/uri-res/N2Ls?urn:nir:stato:"
+    "decreto.legge:2014-04-24;66~art3",
     "Istruzioni ai modelli dichiarativi / prassi Agenzia delle Entrate: "
     "https://www.agenziaentrate.gov.it/portale/",
     "Vigenza: dal 01/01/2027 si applica il nuovo testo unico D.Lgs. 117/2026 e la "
@@ -101,8 +104,22 @@ def classifica(tipo):
 
 
 def simula_vendita(tipo, pmc, prezzo, quantita, minus_disponibili=0.0,
-                   quota_stato=0.0, costi=0.0):
-    """Simula la vendita di una posizione. Importi in euro, quota_stato in 0..1."""
+                   quota_stato=None, costi=0.0):
+    """Simula la vendita di una posizione.
+
+    Importi in euro. `quota_stato` e' la quota agevolata di un OICR (0..1):
+    se None il dato e' mancante e per gli OICR viene restituito uno scenario
+    min/max invece di un singolo importo.
+
+    Due meccanismi distinti, da non confondere:
+
+    - Titoli pubblici agevolati: il REDDITO DIVERSO e' computato nella misura
+      del 48,08% dell'ammontare realizzato (art. 3 c. 5 DL 66/2014, che
+      modifica gli artt. 5, 6 e 7 del D.Lgs. 461/1997). La riduzione precede
+      quindi la compensazione con lo zainetto, e vale anche per le perdite.
+    - OICR/ETF con componente in titoli pubblici: il provento e' reddito di
+      capitale e la componente agevolata sconta il 26% su base ridotta.
+    """
     info = classifica(tipo)
     if not info["calcolabile"]:
         return {"errore": info["motivo"], "verificare": info["verificare"],
@@ -125,59 +142,105 @@ def simula_vendita(tipo, pmc, prezzo, quantita, minus_disponibili=0.0,
         "fonti": info["fonti"],
     }
 
+    minus_disponibili = max(0.0, float(minus_disponibili))
+    e_oicr = tipo in ("etf", "oicr")
+
     if risultato <= 0:
-        minus_generate = -risultato if info["minus_alimenta_zainetto"] else 0.0
+        perdita = -risultato
+        if not info["minus_alimenta_zainetto"]:
+            minus_generate = 0.0
+            verificare.append("La differenza negativa su questo strumento potrebbe non "
+                              "essere deducibile: verificare.")
+        elif info["componente_agevolata"]:
+            # La perdita e' un reddito diverso, computato al 48,08%.
+            minus_generate = perdita * FRAZIONE_IMPONIBILE_AGEVOLATA
+            verificare.append("Perdita su titoli pubblici agevolati: computata nella "
+                              "misura del 48,08%% dell'ammontare realizzato (%.2f su "
+                              "%.2f), art. 3 c. 5 DL 66/2014."
+                              % (minus_generate, perdita))
+        else:
+            minus_generate = perdita
+            if quota_stato:
+                verificare.append("NON VERIFICATO: la quota della perdita riferibile a "
+                                  "titoli pubblici (%.2f%%) potrebbe rilevare in misura "
+                                  "ridotta. Importo indicato al lordo: verificare prima "
+                                  "di considerarlo utilizzabile per intero."
+                                  % (clamp01(quota_stato) * 100))
         out.update({
             "imposta_stimata": 0.0,
             "minusvalenza_generata": r(minus_generate),
             "zainetto_dopo": r(minus_disponibili + minus_generate),
         })
-        if not info["minus_alimenta_zainetto"]:
-            verificare.append("La differenza negativa su questo strumento potrebbe non "
-                              "essere deducibile: verificare.")
         verificare.append("Minusvalenze utilizzabili entro il 4o anno successivo a quello "
                           "di realizzo: verificare il termine vigente.")
         return out
 
     compensabile = info["plus_compensabile_con_zainetto"]
-    minus_usate = min(max(0.0, minus_disponibili), risultato) if compensabile else 0.0
-    imponibile = risultato - minus_usate
 
     if info["componente_agevolata"]:
-        quota_agev = 1.0
+        # Il reddito diverso e' ridotto PRIMA della compensazione.
+        rilevante = risultato * FRAZIONE_IMPONIBILE_AGEVOLATA
+        minus_usate = min(minus_disponibili, rilevante)
+        imponibile = rilevante - minus_usate
+        imposta = imponibile * ALIQUOTA_ORDINARIA
+        out["reddito_diverso_rilevante"] = r(rilevante)
+        out["quota_agevolata_applicata"] = 1.0
+        verificare.append("Reddito diverso computato al 48,08%% dell'ammontare realizzato "
+                          "(%.2f su %.2f) e solo dopo compensato con lo zainetto: "
+                          "art. 3 c. 5 DL 66/2014." % (rilevante, risultato))
     else:
-        quota_agev = clamp01(quota_stato)
-        if tipo in ("etf", "oicr") and quota_agev == 0.0:
-            verificare.append("Quota di titoli di Stato/White List del fondo non fornita: "
-                              "calcolo eseguito a 0% agevolato. Recuperare la percentuale "
-                              "comunicata dall'emittente o dall'intermediario.")
-        elif quota_agev > 0.0:
+        minus_usate = min(minus_disponibili, risultato) if compensabile else 0.0
+        imponibile = risultato - minus_usate
+        if e_oicr and quota_stato is None:
+            # Dato mancante: nessun importo singolo, solo lo scenario.
+            imposta_max = imponibile * ALIQUOTA_ORDINARIA
+            imposta_min = imponibile * FRAZIONE_IMPONIBILE_AGEVOLATA * ALIQUOTA_ORDINARIA
+            out.update({
+                "minusvalenze_disponibili": r(minus_disponibili),
+                "minusvalenze_utilizzate": r(minus_usate),
+                "zainetto_residuo": r(minus_disponibili - minus_usate),
+                "imponibile": r(imponibile),
+                "quota_agevolata_applicata": None,
+                "dato_mancante": "quota_stato",
+                "imposta_stimata": None,
+                "imposta_scenario": {"quota_agevolata_0": r(imposta_max),
+                                     "quota_agevolata_100": r(imposta_min)},
+            })
+            verificare.append("Quota di titoli di Stato/White List del fondo NON FORNITA: "
+                              "nessun importo singolo calcolabile. Riportare l'intervallo "
+                              "%.2f - %.2f e recuperare la percentuale comunicata "
+                              "dall'emittente o dall'intermediario."
+                              % (imposta_min, imposta_max))
+            if not compensabile and minus_disponibili > 0:
+                verificare.append("Plusvalenza qualificata come reddito di capitale: NON "
+                                  "abbattuta dalle minusvalenze in zainetto.")
+            verificare.append("Aliquota e frazione imponibile sono valori di riferimento "
+                              "non verificati (references/regole-correnti.md).")
+            return out
+
+        quota_agev = clamp01(quota_stato or 0.0)
+        base_agevolata = imponibile * quota_agev
+        base_ordinaria = imponibile - base_agevolata
+        imposta = (base_ordinaria * ALIQUOTA_ORDINARIA
+                   + base_agevolata * FRAZIONE_IMPONIBILE_AGEVOLATA * ALIQUOTA_ORDINARIA)
+        out["quota_agevolata_applicata"] = quota_agev
+        if e_oicr and quota_agev > 0.0:
             verificare.append("Quota agevolata assunta pari a %.2f%%: confermarla sulla "
                               "comunicazione dell'emittente/intermediario."
                               % (quota_agev * 100))
-
-    base_agevolata = imponibile * quota_agev
-    base_ordinaria = imponibile - base_agevolata
-    imposta = (base_ordinaria * ALIQUOTA_ORDINARIA
-               + base_agevolata * FRAZIONE_IMPONIBILE_AGEVOLATA * ALIQUOTA_ORDINARIA)
 
     if not compensabile and minus_disponibili > 0:
         verificare.append("Plusvalenza qualificata come reddito di capitale: NON abbattuta "
                           "dalle minusvalenze in zainetto. Verificare la qualificazione "
                           "dello strumento prima di considerare definitivo il risultato.")
-    if minus_usate > 0:
-        verificare.append("Compensazione applicata sull'intero risultato prima "
-                          "dell'eventuale riduzione della base imponibile: verificare "
-                          "l'ordine applicato dall'intermediario.")
     verificare.append("Aliquota e frazione imponibile sono valori di riferimento non "
                       "verificati (references/regole-correnti.md).")
 
     out.update({
         "minusvalenze_disponibili": r(minus_disponibili),
         "minusvalenze_utilizzate": r(minus_usate),
-        "zainetto_residuo": r(max(0.0, minus_disponibili) - minus_usate),
+        "zainetto_residuo": r(minus_disponibili - minus_usate),
         "imponibile": r(imponibile),
-        "quota_agevolata_applicata": quota_agev,
         "imposta_stimata": r(imposta),
         "netto_incassato": r(controvalore - imposta - costi),
         "aliquota_effettiva_su_risultato": r(imposta / risultato),
@@ -206,8 +269,9 @@ def main(argv=None):
     v.add_argument("--prezzo", type=float, required=True, help="prezzo di vendita")
     v.add_argument("--quantita", type=float, required=True)
     v.add_argument("--minus", type=float, default=0.0, help="minusvalenze in zainetto")
-    v.add_argument("--quota-stato", type=float, default=0.0,
-                   help="quota agevolata del fondo, da 0 a 1")
+    v.add_argument("--quota-stato", type=float, default=None,
+                   help="quota agevolata del fondo, da 0 a 1; se omessa per un OICR "
+                        "il risultato e' uno scenario min/max")
     v.add_argument("--costi", type=float, default=0.0, help="commissioni di negoziazione")
 
     a = p.parse_args(argv)

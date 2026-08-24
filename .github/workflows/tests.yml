@@ -1,0 +1,34 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  casi-fiscali:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Casi fiscali di regressione
+        run: python skills/italian-investor/tests/run_tests.py
+      - name: Smoke test degli script
+        run: |
+          cd skills/italian-investor
+          python scripts/portfolio.py analizza examples/portafoglio-esempio.csv > /dev/null
+          python scripts/portfolio.py ribilancia examples/portafoglio-esempio.csv \
+            --target azionario=45,obbligazionario=50,liquidita=5 > /dev/null
+          python scripts/tax_engine.py classifica --tipo etf > /dev/null
+      - name: Coerenza delle version nei manifest
+        run: |
+          python - <<'PY'
+          import json
+          p = json.load(open(".claude-plugin/plugin.json", encoding="utf-8"))["version"]
+          m = json.load(open(".claude-plugin/marketplace.json", encoding="utf-8"))
+          mp = m["plugins"][0]["version"]
+          assert p == mp, "version disallineate: plugin.json %s, marketplace.json %s" % (p, mp)
+          print("version allineate:", p)
+          PY

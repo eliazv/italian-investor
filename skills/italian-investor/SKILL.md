@@ -81,6 +81,11 @@ Formato del CSV atteso: vedi
 Gli script restituiscono, oltre ai numeri, i campi `verificare` e `fonti`:
 riportali nell'output finale, non scartarli.
 
+Quando un dato necessario manca, il motore **non produce un importo singolo**:
+restituisce `imposta_stimata: null`, il campo `dato_mancante` e un
+`imposta_scenario` con i due estremi. In quel caso riporta l'intervallo e chiedi
+il dato: non scegliere un estremo e non presentarlo come stima.
+
 ## Claim audit (obbligatoria)
 
 | Affermazione | Tipo | Fonte | Data fonte | Confidenza |
