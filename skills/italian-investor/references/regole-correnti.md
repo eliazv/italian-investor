@@ -12,7 +12,7 @@
 | --- | --- | --- | --- |
 | Aliquota ordinaria redditi finanziari | 26% dal 01/07/2014, su redditi di capitale (art. 44 TUIR) e redditi diversi (art. 67 c.1 lett. c-bis...c-quinquies) | 24/08/2026 | DL 66/2014 art. 3 c.1, Normattiva |
 | Titoli di Stato IT / White List / enti assimilati | redditi diversi computati al 48,08% dell'ammontare realizzato, poi 26%: effettivo 12,5008%. La riduzione precede la compensazione e vale anche per le perdite | 24/08/2026 | DL 66/2014 art. 3 c. 5, Normattiva (testo verificato verbatim) |
-| Quota agevolata di un OICR | dipende dal singolo fondo, comunicata dall'emittente | — | — |
+| Quota agevolata di un OICR | proventi riferibili ai titoli pubblici tassati al 26% sul 48,08%; perdite riferibili ai titoli pubblici deducibili per il 48,08%. Serve la percentuale media comunicata/applicabile al fondo | 24/08/2026 | Agenzia Entrate, Circolare 19/E del 27/06/2014, Documentazione Economica e Finanziaria MEF |
 | Imposta di bollo dossier titoli | 0,2% annuo del controvalore | — | — |
 | IVAFE (attività estere) | 0,2% annuo, aliquota maggiorata per prodotti in Stati non collaborativi | — | — |
 | Cripto-attività | regime e aliquota modificati più volte di recente: **verificare l'anno d'imposta** | — | — |
