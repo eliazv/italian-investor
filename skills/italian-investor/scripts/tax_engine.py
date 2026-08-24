@@ -35,8 +35,6 @@ CATEGORIE = {
                          nota="Obbligazione corporate: capital gain reddito diverso"),
     "titolo_stato": dict(categoria_plus=DIVERSO, categoria_minus=DIVERSO, agevolato=True,
                          nota="Titolo di Stato IT / White List / ente assimilato"),
-    "etc_etn": dict(categoria_plus=DIVERSO, categoria_minus=DIVERSO, agevolato=False,
-                    nota="ETC/ETN: non sono OICR"),
     "certificate": dict(categoria_plus=DIVERSO, categoria_minus=DIVERSO, agevolato=False,
                         nota="Certificate: reddito diverso"),
     "liquidita": dict(categoria_plus=CAPITALE, categoria_minus=None, agevolato=False,
@@ -45,6 +43,9 @@ CATEGORIE = {
 
 # Tipi per cui il motore NON calcola: il regime dipende da elementi da accertare.
 DA_ACCERTARE = {
+    "etc_etn": "ETC/ETN: il trattamento ETF non e' applicabile automaticamente. "
+               "Verificare la sezione 'Taxation in Italy' del prospetto del singolo "
+               "strumento prima di classificarne i proventi.",
     "etf_non_armonizzato": "OICR non armonizzato: il regime puo differire e concorrere "
                            "al reddito complessivo. Verificare caso per caso.",
     "cripto": "Regime delle cripto-attivita modificato piu volte: verificare l'anno "
@@ -68,6 +69,10 @@ FONTI_DA_CITARE = [
     "%7B7953D773-A884-4630-A7EB-EF5187839207%7D",
     "Istruzioni ai modelli dichiarativi / prassi Agenzia delle Entrate: "
     "https://www.agenziaentrate.gov.it/portale/",
+    "Borsa Italiana, ETC/ETN - Valori Ufficiali: per la fiscalita' rimanda alla "
+    "sezione 'Taxation in Italy' dei Supplementi ai Prospetti di emissione: "
+    "https://www.borsaitaliana.it/etc-etn/statisticheetc/valoriufficialicopy/"
+    "valoriufficialicopy.htm",
     "Vigenza: dal 01/01/2027 si applica il nuovo testo unico D.Lgs. 117/2026 e la "
     "numerazione degli articoli cambia. Verificare il periodo d'imposta del caso.",
 ]
