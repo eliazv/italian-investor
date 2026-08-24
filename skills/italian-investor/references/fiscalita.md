@@ -117,7 +117,8 @@ Conseguenze operative, entrambe facili da sbagliare:
 2. **Vale anche per le perdite.** Una minusvalenza di 1.000 EUR su un titolo
    pubblico agevolato entra in zainetto per 480,80 EUR, non per 1.000.
 
-Attenzione a non estendere questa regola agli OICR: e' un meccanismo diverso.
+Attenzione a non estendere automaticamente questa regola agli OICR: il
+meccanismo e la fonte applicativa sono distinti.
 
 ## ETF con componente in titoli di Stato
 
@@ -126,17 +127,27 @@ riferibile a titoli pubblici italiani, di Stati White List ed enti assimilati
 beneficia di un'imposizione effettiva ridotta, ottenuta applicando l'aliquota
 ordinaria a una **frazione** della base imponibile.
 
-Conseguenza operativa: serve la **percentuale agevolata comunicata
-dall'emittente o applicata dall'intermediario**. Se non ce l'hai, non stimarla e
-non produrre un importo puntuale: il motore restituisce un **intervallo**
-(imposta con quota 0% e con quota 100%) e marca `dato_mancante`. Riporta
-l'intervallo, mai uno dei due estremi come se fosse il risultato.
+La **Circolare Agenzia delle Entrate 19/E del 27/06/2014** chiarisce entrambi i
+lati del meccanismo per gli OICR che investono in titoli pubblici:
 
-Sulle **perdite** di un OICR con componente governativa il motore non applica
-alcuna riduzione e segnala `NON VERIFICATO`: non e' stata reperita una fonte
-primaria che confermi la riduzione della quota deducibile, e una regola non
-verificata non si implementa. L'importo va quindi trattato come limite
-superiore.
+- sui proventi, la quota riferibile ai titoli pubblici e' assoggettata al 26%
+  limitatamente al **48,08%** del relativo ammontare;
+- analogamente, le perdite riferibili ai titoli pubblici possono essere portate
+  in deduzione per un importo **ridotto del 51,92%**, quindi rilevano al 48,08%.
+
+La prassi e' disponibile nella Documentazione Economica e Finanziaria del MEF:
+`https://def.finanze.it/DocTribFrontend/getPrassiDetail.do?id=%7B7953D773-A884-4630-A7EB-EF5187839207%7D`.
+
+Conseguenza operativa: serve la **percentuale agevolata comunicata
+dall'emittente o applicata dall'intermediario**. Per una perdita `L` e una quota
+pubblica `q`, la minusvalenza fiscalmente rilevante e':
+
+`L * ((1 - q) + q * 0,4808)`.
+
+Se `quota_stato` non e' disponibile, non produrre un importo puntuale: il motore
+restituisce un intervallo tra perdita interamente ordinaria (quota 0%) e perdita
+interamente riferibile a titoli pubblici (quota 100%), marca `dato_mancante` e
+richiede la percentuale.
 
 ## Regimi
 
