@@ -13,7 +13,7 @@ certificates, minusvalenze/zainetto fiscale, ribilanciamento tax-aware e alcuni
 casi di successione. ETC/ETN e strumenti con trattamento non generalizzabile
 vengono bloccati finché non viene verificato il prospetto specifico.
 
-> Analisi e simulazione, **non** consulenza finanziaria né fiscale.
+> Analisi e simulazione, **non** consulenza finanziaria né fiscale e non un software per compilare automaticamente la dichiarazione dei redditi.
 
 ## Cosa evita
 
@@ -27,8 +27,7 @@ Errori tipici che un LLM generalista può commettere:
 - ignorare l'anno di scadenza dello zainetto;
 - fidarsi del campo `tipo=etf` senza verificare l'ISIN/KID/prospetto;
 - estendere per analogia la fiscalità di ETF a ETC/ETN;
-- comprimere successione, costo fiscale dell'erede e futura plusvalenza in una
-  singola regola.
+- comprimere successione, costo fiscale dell'erede e futura plusvalenza in una singola regola.
 
 ## Installazione
 
@@ -76,44 +75,35 @@ rating, TER e dati di prodotto vanno recuperati da fonti esterne attendibili
 ## Uso rapido
 
 ```bash
-# Portfolio
 python skills/italian-investor/scripts/portfolio.py analizza portafoglio.csv
 
-# Zainetto strutturato
 python skills/italian-investor/scripts/zainetto.py stato zainetto.csv \
   --anno-fiscale 2026
 
-# Ribilanciamento con minus corrette per broker/scadenza
 python skills/italian-investor/scripts/portfolio.py ribilancia portafoglio.csv \
   --target azionario=70,obbligazionario=25,liquidita=5 \
   --zainetto-csv zainetto.csv --anno-fiscale 2026 \
   --regime amministrato
 
-# Verifica ISIN/tipo
 python skills/italian-investor/scripts/instrument_resolver.py resolve \
   --isin US0378331005 --tipo azione --registry strumenti.csv
 
-# Portfolio in modalità stretta
 python skills/italian-investor/scripts/portfolio.py analizza portafoglio.csv \
   --registry strumenti.csv --strict-instruments
 
-# Vendita singola
 python skills/italian-investor/scripts/tax_engine.py vendita \
   --tipo etf --pmc 90 --prezzo 120 --quantita 100 --quota-stato 0.35
 
-# Successione, solo casi coperti dal motore
 python skills/italian-investor/scripts/successione.py costo \
   --tipo titolo_stato --esente-successione --valore-normale 10250
 
-# Test
 python skills/italian-investor/tests/run_tests.py
 python skills/italian-investor/tests/run_support_tests.py
 ```
 
 ## Zainetto fiscale per broker e scadenza
 
-Il vecchio `--minus 2000` resta come modalità legacy, ma il formato consigliato
-è un CSV a lotti:
+Il vecchio `--minus 2000` resta come modalità legacy, ma il formato consigliato è un CSV a lotti:
 
 ```text
 broker,regime,anno_realizzo,importo
@@ -122,33 +112,24 @@ Directa,amministrato,2024,1200
 IBKR,dichiarativo,2023,800
 ```
 
-La scadenza è calcolata come quarto periodo d'imposta successivo all'anno di
-realizzo. In **amministrato** il simulatore rende disponibili solo le minus non
-scadute dello stesso broker della vendita. In **dichiarativo** può aggregare i
-lotti marcati dichiarativo.
+La scadenza è calcolata come quarto periodo d'imposta successivo all'anno di realizzo. In **amministrato** il simulatore rende disponibili solo le minus non scadute dello stesso broker della vendita. In **dichiarativo** può aggregare i lotti marcati dichiarativo.
 
-Quando simula più vendite, consuma prima i lotti con la scadenza più vicina.
-Questa è una scelta di ottimizzazione del simulatore, non una pretesa sull'ordine
-contabile applicato dal singolo intermediario.
+Quando simula più vendite, consuma prima i lotti con la scadenza più vicina. Questa è una scelta di ottimizzazione del simulatore, non una pretesa sull'ordine contabile applicato dal singolo intermediario.
 
 Esempio: `skills/italian-investor/examples/zainetto-esempio.csv`.
 
 ## Instrument resolver
 
-`instrument_resolver.py` non tenta di indovinare il prodotto dal prefisso ISIN.
-Valida formalmente l'ISIN tramite check digit e confronta il `tipo` dichiarato
-nel portfolio con un registry verificato su KID/prospetto:
+`instrument_resolver.py` non tenta di indovinare il prodotto dal prefisso ISIN. Valida formalmente l'ISIN tramite check digit e confronta il `tipo` dichiarato nel portfolio con un registry verificato su KID/prospetto:
 
 ```text
 isin,tipo,fonte,verificato_il
 US0378331005,azione,prospetto/emittente,2026-08-24
 ```
 
-Se l'ISIN manca dal registry, il tipo è incoerente oppure mancano fonte/data,
-`--strict-instruments` blocca l'analisi fiscale.
+Se l'ISIN manca dal registry, il tipo è incoerente oppure mancano fonte/data, `--strict-instruments` blocca l'analisi fiscale.
 
-Esempio/template:
-`skills/italian-investor/examples/strumenti-registry-esempio.csv`.
+Esempio/template: `skills/italian-investor/examples/strumenti-registry-esempio.csv`.
 
 ## Fiscalità implementata
 
@@ -158,17 +139,13 @@ Tra le regole già sottoposte a test di regressione:
 - perdita OICR come reddito diverso;
 - quota OICR riferibile a titoli pubblici agevolati;
 - 26% ordinario;
-- titoli pubblici: reddito diverso computato al 48,08% **prima** della
-  compensazione;
+- titoli pubblici: reddito diverso computato al 48,08% **prima** della compensazione;
 - perdita su titolo pubblico ridotta al 48,08%;
 - azioni, obbligazioni e certificates nei casi coperti;
 - commissioni/oneri inerenti nel calcolo del costo;
-- hard-stop su cripto, OICR non armonizzati, PIR, previdenza ed ETC/ETN quando
-  non esiste una qualificazione verificata applicabile.
+- hard-stop su cripto, OICR non armonizzati, PIR, previdenza ed ETC/ETN quando non esiste una qualificazione verificata applicabile.
 
-Se `quota_stato` di un OICR manca, il motore restituisce uno **scenario** e non
-un numero fittiziamente preciso. Se è fuori dall'intervallo 0..1, viene
-rifiutata.
+Se `quota_stato` di un OICR manca, il motore restituisce uno **scenario** e non un numero fittiziamente preciso. Se è fuori dall'intervallo 0..1, viene rifiutata.
 
 ## Successione
 
@@ -179,12 +156,7 @@ La skill separa sempre:
 3. costo fiscalmente riconosciuto all'erede;
 4. trattamento fiscale della futura vendita/provento.
 
-`scripts/successione.py` implementa in modo deterministico solo la parte
-coperta direttamente dall'art. 68 c.6 per azioni/titoli/obbligazioni: valore
-definito o, in mancanza, dichiarato; per titoli esenti, valore normale alla
-data di apertura; oneri inerenti documentabili aggiunti al costo. ETF/OICR e
-strumenti ibridi restano fuori da **questo specifico helper**: hanno regole
-proprie da verificare e non vengono assimilati per analogia.
+`scripts/successione.py` implementa in modo deterministico solo la parte coperta direttamente dall'art. 68 c.6 per azioni/titoli/obbligazioni: valore definito o, in mancanza, dichiarato; per titoli esenti, valore normale alla data di apertura; oneri inerenti documentabili aggiunti al costo. ETF/OICR e strumenti ibridi restano fuori da **questo specifico helper**: hanno regole proprie da verificare e non vengono assimilati per analogia.
 
 I casi sono in `tests/casi_successione.json` e fanno parte della CI.
 
@@ -197,8 +169,7 @@ Gerarchia principale:
 3. database finanziari e documentazione del broker;
 4. blog/forum solo come pista di ricerca.
 
-Ogni test marcato `normativo` deve contenere `fonte`, `articolo` e
-`verificato_il`, altrimenti la CI fallisce.
+Ogni test marcato `normativo` deve contenere `fonte`, `articolo` e `verificato_il`, altrimenti la CI fallisce.
 
 La skill chiude le analisi con un **claim audit**:
 
@@ -234,13 +205,9 @@ skills/italian-investor/
 
 ## Stato
 
-**v0.4.0**. Le regole portanti sono corredate da riferimenti normativi/prassi e
-test automatici. La CI esegue casi fiscali, zainetto, resolver ISIN,
-successione e smoke test del flusso portfolio.
+**v0.4.0**. Le regole portanti sono corredate da riferimenti normativi/prassi e test automatici. La CI esegue casi fiscali, zainetto, resolver ISIN, successione e smoke test del flusso portfolio.
 
-Il nuovo testo unico delle imposte sui redditi (D.Lgs. 117/2026) è applicabile
-dal 1° gennaio 2027 e cambia la numerazione dei riferimenti: la skill impone di
-verificare il testo vigente per il periodo d'imposta analizzato.
+Il nuovo testo unico delle imposte sui redditi (D.Lgs. 117/2026) è applicabile dal 1° gennaio 2027 e cambia la numerazione dei riferimenti: la skill impone di verificare il testo vigente per il periodo d'imposta analizzato.
 
 ## Licenza
 
