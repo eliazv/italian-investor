@@ -69,6 +69,10 @@ ribilanciamento / scenari
 Claude: interpretazione + claim audit + fonti
 ```
 
+La skill **non è un provider di market data**: prezzi, holdings, duration,
+rating, TER e dati di prodotto vanno recuperati da fonti esterne attendibili
+(KID/prospetto, emittente, broker o data provider) e poi passati al motore.
+
 ## Uso rapido
 
 ```bash
@@ -89,8 +93,7 @@ python skills/italian-investor/scripts/portfolio.py ribilancia portafoglio.csv \
 python skills/italian-investor/scripts/instrument_resolver.py resolve \
   --isin US0378331005 --tipo azione --registry strumenti.csv
 
-# Portfolio in modalità stretta: nessun calcolo fiscale se gli strumenti
-# non risultano verificati nel registry
+# Portfolio in modalità stretta
 python skills/italian-investor/scripts/portfolio.py analizza portafoglio.csv \
   --registry strumenti.csv --strict-instruments
 
@@ -179,8 +182,9 @@ La skill separa sempre:
 `scripts/successione.py` implementa in modo deterministico solo la parte
 coperta direttamente dall'art. 68 c.6 per azioni/titoli/obbligazioni: valore
 definito o, in mancanza, dichiarato; per titoli esenti, valore normale alla
-data di apertura; oneri inerenti documentabili aggiunti al costo. Gli altri
-strumenti non vengono assimilati per analogia.
+data di apertura; oneri inerenti documentabili aggiunti al costo. ETF/OICR e
+strumenti ibridi restano fuori da **questo specifico helper**: hanno regole
+proprie da verificare e non vengono assimilati per analogia.
 
 I casi sono in `tests/casi_successione.json` e fanno parte della CI.
 
@@ -231,8 +235,8 @@ skills/italian-investor/
 ## Stato
 
 **v0.4.0**. Le regole portanti sono corredate da riferimenti normativi/prassi e
-test automatici. La CI esegue sia i casi fiscali principali sia zainetto,
-resolver ISIN, successione e smoke test del flusso portfolio.
+test automatici. La CI esegue casi fiscali, zainetto, resolver ISIN,
+successione e smoke test del flusso portfolio.
 
 Il nuovo testo unico delle imposte sui redditi (D.Lgs. 117/2026) è applicabile
 dal 1° gennaio 2027 e cambia la numerazione dei riferimenti: la skill impone di
