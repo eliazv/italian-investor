@@ -37,7 +37,10 @@ chiesto all'utente o recuperato dal KID/prospetto.
 2. **Strumenti.** Per ogni riga risali a `ISIN → natura giuridica → categoria
    fiscale`. Mai dedurre il trattamento dal nome commerciale. Un "ETF
    obbligazionario governativo" non è automaticamente al 12,5%: serve la quota
-   agevolata comunicata dall'emittente/intermediario.
+   agevolata comunicata dall'emittente/intermediario. Il campo `tipo` del CSV è
+   un dato dichiarato in input: **non considerarlo verificato solo perché è
+   presente**. Prima di usare un risultato fiscale, conferma che sia coerente
+   con la natura giuridica ricavata dall'ISIN/KID.
 3. **Calcoli.** Esegui i numeri con `scripts/`, non a mente. Vedi
    [scripts/portfolio.py](scripts/portfolio.py) e
    [scripts/tax_engine.py](scripts/tax_engine.py).
@@ -71,7 +74,7 @@ Tutti gli script sono stdlib-only, senza dipendenze, e stampano JSON.
 python scripts/portfolio.py analizza portafoglio.csv
 python scripts/portfolio.py ribilancia portafoglio.csv --target azionario=70,obbligazionario=25,liquidita=5
 python scripts/tax_engine.py vendita --tipo etf --pmc 90 --prezzo 120 --quantita 100 --minus 2000
-python scripts/tax_engine.py classifica --tipo btp
+python scripts/tax_engine.py classifica --tipo titolo_stato
 python tests/run_tests.py
 ```
 
@@ -82,9 +85,10 @@ Gli script restituiscono, oltre ai numeri, i campi `verificare` e `fonti`:
 riportali nell'output finale, non scartarli.
 
 Quando un dato necessario manca, il motore **non produce un importo singolo**:
-restituisce `imposta_stimata: null`, il campo `dato_mancante` e un
-`imposta_scenario` con i due estremi. In quel caso riporta l'intervallo e chiedi
-il dato: non scegliere un estremo e non presentarlo come stima.
+restituisce `imposta_stimata: null` oppure una quantità fiscale non determinata,
+il campo `dato_mancante` e uno scenario con i due estremi. In quel caso riporta
+l'intervallo e chiedi il dato: non scegliere un estremo e non presentarlo come
+stima.
 
 ## Claim audit (obbligatoria)
 
@@ -108,4 +112,5 @@ amministrato: i numeri qui sono stime da confrontare con il rendiconto fiscale.
 Obbligazioni: `quantita` = valore nominale, `pmc` e `prezzo` in frazione
 (corso 101,30 → `1.0130`). `valuta_esposizione` è la valuta dei sottostanti,
 non quella di quotazione. `quota_stato` (0–1) è la quota agevolata comunicata
-dall'emittente: se manca, il calcolo gira a 0% e lo dichiara.
+dall'emittente: se manca per un OICR, il motore **non inventa 0%**, ma restituisce
+uno scenario min/max per l'imposta o per la minusvalenza fiscalmente rilevante.
