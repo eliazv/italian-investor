@@ -40,7 +40,9 @@ chiesto all'utente o recuperato dal KID/prospetto.
    agevolata comunicata dall'emittente/intermediario. Il campo `tipo` del CSV è
    un dato dichiarato in input: **non considerarlo verificato solo perché è
    presente**. Prima di usare un risultato fiscale, conferma che sia coerente
-   con la natura giuridica ricavata dall'ISIN/KID.
+   con la natura giuridica ricavata dall'ISIN/KID/prospetto. Per `etc_etn` non
+   applicare una regola generica: Borsa Italiana rimanda alla sezione
+   `Taxation in Italy` del prospetto del singolo strumento.
 3. **Calcoli.** Esegui i numeri con `scripts/`, non a mente. Vedi
    [scripts/portfolio.py](scripts/portfolio.py) e
    [scripts/tax_engine.py](scripts/tax_engine.py).
@@ -54,7 +56,8 @@ chiesto all'utente o recuperato dal KID/prospetto.
    essere sbagliate: fiscalità, esposizione valutaria, concentrazione,
    assunzioni sui rendimenti, costi di transazione.
 8. **Stop.** Se manca un dato che cambierebbe la conclusione (regime, PMC,
-   quota agevolata, scadenza delle minus), fermati e chiedilo. Non stimarlo.
+   quota agevolata, scadenza delle minus, prospetto necessario), fermati e
+   chiedilo. Non stimarlo.
 
 ## Riferimenti
 
