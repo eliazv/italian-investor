@@ -4,76 +4,43 @@
     "perche": "La plusvalenza da OICR e' reddito di capitale. E' l'errore tipico del modello.",
     "fonte": "TUIR (DPR 917/1986), testo ufficiale Agenzia delle Entrate letto verbatim",
     "verificato_il": "2026-08-24",
-    "input": {
-      "tipo": "etf",
-      "pmc": 90,
-      "prezzo": 120,
-      "quantita": 100,
-      "minus_disponibili": 5000,
-      "quota_stato": 0
-    },
-    "atteso": {
-      "categoria_reddito": "reddito_di_capitale",
-      "minusvalenze_utilizzate": 0.0,
-      "imposta_stimata": 780.0
-    },
+    "input": {"tipo": "etf", "pmc": 90, "prezzo": 120, "quantita": 100, "minus_disponibili": 5000, "quota_stato": 0},
+    "atteso": {"categoria_reddito": "reddito_di_capitale", "minusvalenze_utilizzate": 0.0, "imposta_stimata": 780.0},
     "tipo_caso": "normativo",
     "articolo": "art. 44 c.1 lett. g) + art. 45 c.1: il provento da gestione collettiva, inclusa la differenza tra somma percepita e somma affidata in gestione, e' reddito di capitale; l'art. 68 c.5 ammette la compensazione solo tra redditi diversi delle lett. c-bis)...c-quinquies) dell'art. 67"
   },
   {
     "nome": "ETF in gain con quota_stato non fornita: nessun importo singolo, solo scenario",
     "perche": "Con la quota agevolata ignota un importo puntuale sarebbe falsamente preciso.",
-    "input": {
-      "tipo": "etf",
-      "pmc": 90,
-      "prezzo": 120,
-      "quantita": 100,
-      "minus_disponibili": 0
-    },
-    "atteso": {
-      "imposta_stimata": null,
-      "dato_mancante": "quota_stato",
-      "imposta_scenario.quota_agevolata_0": 780.0,
-      "imposta_scenario.quota_agevolata_100": 375.02,
-      "verificare_contiene": "NON FORNITA"
-    },
+    "input": {"tipo": "etf", "pmc": 90, "prezzo": 120, "quantita": 100, "minus_disponibili": 0},
+    "atteso": {"imposta_stimata": null, "dato_mancante": "quota_stato", "imposta_scenario.quota_agevolata_0": 780.0, "imposta_scenario.quota_agevolata_100": 375.02, "verificare_contiene": "NON FORNITA"},
     "tipo_caso": "comportamento"
   },
   {
-    "nome": "ETF in perdita: genera minusvalenza in zainetto",
-    "perche": "La differenza negativa da OICR e' reddito diverso.",
-    "fonte": "TUIR (DPR 917/1986), testo ufficiale Agenzia delle Entrate letto verbatim",
+    "nome": "ETF in perdita senza componente governativa: genera minusvalenza piena",
+    "perche": "La differenza negativa da OICR e' reddito diverso; con quota titoli pubblici pari a zero la perdita e' deducibile per intero.",
+    "fonte": "TUIR artt. 67-68; Agenzia delle Entrate, Circolare 19/E del 27/06/2014",
     "verificato_il": "2026-08-24",
-    "input": {
-      "tipo": "etf",
-      "pmc": 100,
-      "prezzo": 80,
-      "quantita": 50,
-      "minus_disponibili": 0
-    },
-    "atteso": {
-      "categoria_reddito": "reddito_diverso",
-      "imposta_stimata": 0.0,
-      "minusvalenza_generata": 1000.0
-    },
+    "input": {"tipo": "etf", "pmc": 100, "prezzo": 80, "quantita": 50, "minus_disponibili": 0, "quota_stato": 0},
+    "atteso": {"categoria_reddito": "reddito_diverso", "imposta_stimata": 0.0, "minusvalenza_generata": 1000.0},
     "tipo_caso": "normativo",
-    "articolo": "art. 67 c.1 lett. c-ter): cessione o rimborso di quote di OICR; art. 68 c.5 per la deduzione dell'eccedenza"
+    "articolo": "art. 67 c.1 lett. c-ter), art. 68 c.5; Circolare 19/E: le perdite riferibili ai titoli pubblici sono ridotte del 51,92%, quindi la parte non riferibile a titoli pubblici resta pienamente deducibile"
   },
   {
-    "nome": "ETF governativo al 50% in perdita: la riduzione della quota NON e' verificata",
-    "perche": "La perdita e' indicata al lordo, ma il motore deve dichiarare che la quota riferibile a titoli pubblici potrebbe rilevare in misura ridotta. Prassi non reperita: non si implementa una regola non verificata.",
-    "input": {
-      "tipo": "etf",
-      "pmc": 100,
-      "prezzo": 90,
-      "quantita": 100,
-      "minus_disponibili": 0,
-      "quota_stato": 0.5
-    },
-    "atteso": {
-      "minusvalenza_generata": 1000.0,
-      "verificare_contiene": "NON VERIFICATO"
-    },
+    "nome": "ETF governativo al 50% in perdita: la quota pubblica rileva al 48,08%",
+    "perche": "Su una perdita di 1.000 EUR con quota pubblica 50%, 500 EUR rilevano integralmente e 500 EUR al 48,08%: minus deducibile 740,40 EUR.",
+    "fonte": "Agenzia delle Entrate, Circolare 19/E del 27/06/2014, Documentazione Economica e Finanziaria MEF",
+    "articolo": "La circolare stabilisce che le perdite da OICR riferibili ai titoli pubblici possono essere dedotte per un importo ridotto del 51,92% del loro ammontare",
+    "verificato_il": "2026-08-24",
+    "input": {"tipo": "etf", "pmc": 100, "prezzo": 90, "quantita": 100, "minus_disponibili": 0, "quota_stato": 0.5},
+    "atteso": {"minusvalenza_generata": 740.4, "zainetto_dopo": 740.4, "verificare_contiene": "Circolare Agenzia Entrate 19/E"},
+    "tipo_caso": "normativo"
+  },
+  {
+    "nome": "ETF in perdita con quota_stato ignota: nessun importo singolo",
+    "perche": "La quota pubblica incide sulla minusvalenza fiscalmente deducibile, quindi senza percentuale non va inventato un valore puntuale.",
+    "input": {"tipo": "etf", "pmc": 100, "prezzo": 90, "quantita": 100, "minus_disponibili": 0},
+    "atteso": {"minusvalenza_generata": null, "dato_mancante": "quota_stato", "minusvalenza_scenario.quota_agevolata_0": 1000.0, "minusvalenza_scenario.quota_agevolata_100": 480.8, "verificare_contiene": "NON FORNITA"},
     "tipo_caso": "comportamento"
   },
   {
@@ -81,35 +48,15 @@
     "perche": "Il capital gain azionario e' reddito diverso.",
     "fonte": "TUIR (DPR 917/1986), testo ufficiale Agenzia delle Entrate letto verbatim",
     "verificato_il": "2026-08-24",
-    "input": {
-      "tipo": "azione",
-      "pmc": 100,
-      "prezzo": 150,
-      "quantita": 100,
-      "minus_disponibili": 2000
-    },
-    "atteso": {
-      "categoria_reddito": "reddito_diverso",
-      "minusvalenze_utilizzate": 2000.0,
-      "imposta_stimata": 780.0
-    },
+    "input": {"tipo": "azione", "pmc": 100, "prezzo": 150, "quantita": 100, "minus_disponibili": 2000},
+    "atteso": {"categoria_reddito": "reddito_diverso", "minusvalenze_utilizzate": 2000.0, "imposta_stimata": 780.0},
     "tipo_caso": "normativo",
     "articolo": "art. 67 c.1 lett. c-bis) (partecipazioni non qualificate) e art. 68 c.5"
   },
   {
     "nome": "Azione in gain con zainetto capiente: imposta azzerata",
-    "input": {
-      "tipo": "azione",
-      "pmc": 100,
-      "prezzo": 110,
-      "quantita": 100,
-      "minus_disponibili": 5000
-    },
-    "atteso": {
-      "minusvalenze_utilizzate": 1000.0,
-      "imposta_stimata": 0.0,
-      "zainetto_residuo": 4000.0
-    },
+    "input": {"tipo": "azione", "pmc": 100, "prezzo": 110, "quantita": 100, "minus_disponibili": 5000},
+    "atteso": {"minusvalenze_utilizzate": 1000.0, "imposta_stimata": 0.0, "zainetto_residuo": 4000.0},
     "tipo_caso": "normativo",
     "fonte": "TUIR (DPR 917/1986), testo ufficiale Agenzia delle Entrate letto verbatim",
     "articolo": "art. 68 c.5: l'eccedenza e' portata in deduzione fino a concorrenza",
@@ -121,205 +68,109 @@
     "fonte": "DL 66/2014 art. 3 c. 5 - Normattiva (testo verificato verbatim)",
     "articolo": "art. 3 comma 5 lett. a) b) c), che modifica artt. 5, 6, 7 D.Lgs. 461/1997",
     "verificato_il": "2026-08-24",
-    "input": {
-      "tipo": "titolo_stato",
-      "pmc": 0.95,
-      "prezzo": 1.0,
-      "quantita": 20000,
-      "minus_disponibili": 0
-    },
-    "atteso": {
-      "reddito_diverso_rilevante": 480.8,
-      "imposta_stimata": 125.01
-    },
+    "input": {"tipo": "titolo_stato", "pmc": 0.95, "prezzo": 1.0, "quantita": 20000, "minus_disponibili": 0},
+    "atteso": {"reddito_diverso_rilevante": 480.8, "imposta_stimata": 125.01},
     "tipo_caso": "normativo"
   },
   {
     "nome": "BTP in gain con minus: prima si computa il 48,08%, POI si compensa",
-    "perche": "Ordine invertito rispetto alla prima implementazione: la norma riduce il reddito diverso, non la base dopo compensazione. Compensare sul lordo sprecherebbe minusvalenze e sovrastimerebbe l'imposta.",
+    "perche": "La norma riduce il reddito diverso prima della compensazione con lo zainetto.",
     "fonte": "DL 66/2014 art. 3 c. 5 - Normattiva (testo verificato verbatim)",
-    "articolo": "art. 3 comma 5: 'i redditi diversi ... sono computati nella misura del 48,08 per cento dell'ammontare realizzato'",
+    "articolo": "art. 3 comma 5: i redditi diversi sono computati nella misura del 48,08 per cento dell'ammontare realizzato",
     "verificato_il": "2026-08-24",
-    "input": {
-      "tipo": "titolo_stato",
-      "pmc": 0.95,
-      "prezzo": 1.0,
-      "quantita": 20000,
-      "minus_disponibili": 400
-    },
-    "atteso": {
-      "reddito_diverso_rilevante": 480.8,
-      "minusvalenze_utilizzate": 400.0,
-      "imponibile": 80.8,
-      "imposta_stimata": 21.01
-    },
+    "input": {"tipo": "titolo_stato", "pmc": 0.95, "prezzo": 1.0, "quantita": 20000, "minus_disponibili": 400},
+    "atteso": {"reddito_diverso_rilevante": 480.8, "minusvalenze_utilizzate": 400.0, "imponibile": 80.8, "imposta_stimata": 21.01},
     "tipo_caso": "normativo"
   },
   {
     "nome": "BTP in perdita: la minusvalenza entra in zainetto al 48,08%",
-    "perche": "La riduzione vale per i redditi diversi, quindi anche per le perdite: mettere il 100% nello zainetto sovrastimerebbe le minus utilizzabili.",
+    "perche": "La riduzione vale anche per le perdite.",
     "fonte": "DL 66/2014 art. 3 c. 5 - Normattiva (testo verificato verbatim)",
+    "articolo": "art. 3 comma 5, redditi diversi da titoli pubblici computati al 48,08%",
     "verificato_il": "2026-08-24",
-    "input": {
-      "tipo": "titolo_stato",
-      "pmc": 1.0,
-      "prezzo": 0.95,
-      "quantita": 20000,
-      "minus_disponibili": 0
-    },
-    "atteso": {
-      "imposta_stimata": 0.0,
-      "minusvalenza_generata": 480.8,
-      "zainetto_dopo": 480.8
-    },
+    "input": {"tipo": "titolo_stato", "pmc": 1.0, "prezzo": 0.95, "quantita": 20000, "minus_disponibili": 0},
+    "atteso": {"imposta_stimata": 0.0, "minusvalenza_generata": 480.8, "zainetto_dopo": 480.8},
     "tipo_caso": "normativo"
   },
   {
     "nome": "Obbligazione corporate in gain: 26% pieno, compensabile",
-    "input": {
-      "tipo": "obbligazione",
-      "pmc": 0.9,
-      "prezzo": 1.0,
-      "quantita": 10000,
-      "minus_disponibili": 500
-    },
-    "atteso": {
-      "categoria_reddito": "reddito_diverso",
-      "minusvalenze_utilizzate": 500.0,
-      "imposta_stimata": 130.0
-    },
+    "input": {"tipo": "obbligazione", "pmc": 0.9, "prezzo": 1.0, "quantita": 10000, "minus_disponibili": 500},
+    "atteso": {"categoria_reddito": "reddito_diverso", "minusvalenze_utilizzate": 500.0, "imposta_stimata": 130.0},
     "tipo_caso": "normativo",
-    "fonte": "TUIR (DPR 917/1986), testo ufficiale Agenzia delle Entrate letto verbatim; DL 66/2014 art. 3, Normattiva, testo letto verbatim",
-    "articolo": "art. 67 c.1 lett. c-ter) (titoli non rappresentativi di merci); aliquota 26% da DL 66/2014 art. 3 c.1, in vigore dal 01/07/2014",
+    "fonte": "TUIR (DPR 917/1986); DL 66/2014 art. 3",
+    "articolo": "art. 67 c.1 lett. c-ter); aliquota 26% da DL 66/2014 art. 3 c.1",
     "verificato_il": "2026-08-24"
   },
   {
     "nome": "ETF con quota titoli di Stato al 50%: aliquota mista",
-    "perche": "Non esiste 'ETF governativo = 12,5%': conta la quota comunicata dall'emittente. Meccanismo diverso dai titoli pubblici detenuti direttamente: qui il provento e' reddito di capitale.",
-    "input": {
-      "tipo": "etf",
-      "pmc": 100,
-      "prezzo": 110,
-      "quantita": 100,
-      "minus_disponibili": 0,
-      "quota_stato": 0.5
-    },
-    "atteso": {
-      "quota_agevolata_applicata": 0.5,
-      "imposta_stimata": 192.5
-    },
+    "perche": "Conta la quota comunicata dall'emittente; la parte pubblica rileva al 48,08%.",
+    "fonte": "Agenzia delle Entrate, Circolare 19/E del 27/06/2014, Documentazione Economica e Finanziaria MEF",
+    "articolo": "OICR che investono in titoli pubblici: proventi riferibili ai titoli pubblici assoggettati a ritenuta del 26% nel limite del 48,08%",
+    "verificato_il": "2026-08-24",
+    "input": {"tipo": "etf", "pmc": 100, "prezzo": 110, "quantita": 100, "minus_disponibili": 0, "quota_stato": 0.5},
+    "atteso": {"quota_agevolata_applicata": 0.5, "imposta_stimata": 192.5},
     "tipo_caso": "normativo"
   },
   {
     "nome": "Certificate in gain: reddito diverso, compensabile",
-    "input": {
-      "tipo": "certificate",
-      "pmc": 900,
-      "prezzo": 1000,
-      "quantita": 10,
-      "minus_disponibili": 400
-    },
-    "atteso": {
-      "minusvalenze_utilizzate": 400.0,
-      "imposta_stimata": 156.0
-    },
+    "input": {"tipo": "certificate", "pmc": 900, "prezzo": 1000, "quantita": 10, "minus_disponibili": 400},
+    "atteso": {"minusvalenze_utilizzate": 400.0, "imposta_stimata": 156.0},
     "tipo_caso": "normativo",
     "fonte": "TUIR (DPR 917/1986), testo ufficiale Agenzia delle Entrate letto verbatim",
     "articolo": "art. 67 c.1 lett. c-quinquies): proventi da rapporti attraverso cui possono essere conseguiti differenziali positivi e negativi in dipendenza di un evento incerto",
     "verificato_il": "2026-08-24"
   },
   {
-    "nome": "ETC/ETN in gain: non e' un OICR, quindi compensabile",
-    "input": {
-      "tipo": "etc_etn",
-      "pmc": 50,
-      "prezzo": 70,
-      "quantita": 100,
-      "minus_disponibili": 1000
-    },
-    "atteso": {
-      "categoria_reddito": "reddito_diverso",
-      "minusvalenze_utilizzate": 1000.0,
-      "imposta_stimata": 260.0
-    },
-    "tipo_caso": "normativo"
+    "nome": "ETC/ETN: il motore richiede il prospetto del singolo strumento",
+    "perche": "Borsa Italiana specifica che il trattamento fiscale ETF non e' applicabile agli ETC/ETN e rimanda alla sezione Taxation in Italy dei Supplementi ai Prospetti di emissione.",
+    "fonte": "Borsa Italiana, ETC/ETN - Valori Ufficiali",
+    "verificato_il": "2026-08-24",
+    "input": {"tipo": "etc_etn", "pmc": 50, "prezzo": 70, "quantita": 100, "minus_disponibili": 1000},
+    "atteso": {"imposta_stimata": null, "errore_atteso": true},
+    "tipo_caso": "comportamento"
   },
   {
     "nome": "Cripto: il motore deve rifiutarsi di calcolare",
     "perche": "Regime cambiato piu volte: va verificato per anno d'imposta.",
-    "input": {
-      "tipo": "cripto",
-      "pmc": 20000,
-      "prezzo": 60000,
-      "quantita": 1,
-      "minus_disponibili": 0
-    },
-    "atteso": {
-      "imposta_stimata": null,
-      "errore_atteso": true
-    },
+    "input": {"tipo": "cripto", "pmc": 20000, "prezzo": 60000, "quantita": 1, "minus_disponibili": 0},
+    "atteso": {"imposta_stimata": null, "errore_atteso": true},
     "tipo_caso": "comportamento"
   },
   {
     "nome": "ETF non armonizzato: il motore deve rifiutarsi di calcolare",
-    "input": {
-      "tipo": "etf_non_armonizzato",
-      "pmc": 100,
-      "prezzo": 130,
-      "quantita": 10,
-      "minus_disponibili": 0
-    },
-    "atteso": {
-      "imposta_stimata": null,
-      "errore_atteso": true
-    },
+    "input": {"tipo": "etf_non_armonizzato", "pmc": 100, "prezzo": 130, "quantita": 10, "minus_disponibili": 0},
+    "atteso": {"imposta_stimata": null, "errore_atteso": true},
     "tipo_caso": "comportamento",
     "perche": "Verifica il comportamento del motore, non una regola normativa."
   },
   {
     "nome": "Tipo sconosciuto: nessuna deduzione per analogia",
-    "input": {
-      "tipo": "prodotto_strutturato_x",
-      "pmc": 100,
-      "prezzo": 120,
-      "quantita": 10,
-      "minus_disponibili": 0
-    },
-    "atteso": {
-      "imposta_stimata": null,
-      "errore_atteso": true
-    },
+    "input": {"tipo": "prodotto_strutturato_x", "pmc": 100, "prezzo": 120, "quantita": 10, "minus_disponibili": 0},
+    "atteso": {"imposta_stimata": null, "errore_atteso": true},
     "tipo_caso": "comportamento",
     "perche": "Verifica il comportamento del motore, non una regola normativa."
   },
   {
+    "nome": "quota_stato fuori intervallo: il motore deve rifiutare il dato",
+    "perche": "Un valore 50 al posto di 0.50 non deve essere corretto silenziosamente a 1.0.",
+    "input": {"tipo": "etf", "pmc": 100, "prezzo": 110, "quantita": 100, "minus_disponibili": 0, "quota_stato": 50},
+    "atteso": {"imposta_stimata": null, "errore_atteso": true},
+    "tipo_caso": "comportamento"
+  },
+  {
     "nome": "Commissioni: riducono il risultato imponibile",
-    "input": {
-      "tipo": "azione",
-      "pmc": 100,
-      "prezzo": 110,
-      "quantita": 100,
-      "minus_disponibili": 0,
-      "costi": 100
-    },
-    "atteso": {
-      "risultato_lordo": 900.0,
-      "imposta_stimata": 234.0
-    },
+    "perche": "L'art. 68 c.6 include tra gli oneri inerenti le commissioni d'intermediazione, che aumentano il costo fiscalmente rilevante.",
+    "fonte": "Agenzia delle Entrate, Dichiarazione precompilata 2026 - Plusvalenze di natura finanziaria",
+    "articolo": "TUIR art. 68 c.6: costo aumentato di ogni onere inerente, comprese le commissioni d'intermediazione, esclusi gli interessi passivi",
+    "verificato_il": "2026-08-24",
+    "input": {"tipo": "azione", "pmc": 100, "prezzo": 110, "quantita": 100, "minus_disponibili": 0, "costi": 100},
+    "atteso": {"risultato_lordo": 900.0, "imposta_stimata": 234.0},
     "tipo_caso": "normativo"
   },
   {
     "nome": "ETF in gain con minus: deve avvisare che non sono utilizzabili",
-    "input": {
-      "tipo": "etf",
-      "pmc": 100,
-      "prezzo": 120,
-      "quantita": 10,
-      "minus_disponibili": 1000
-    },
-    "atteso": {
-      "verificare_contiene": "NON abbattuta"
-    },
+    "input": {"tipo": "etf", "pmc": 100, "prezzo": 120, "quantita": 10, "minus_disponibili": 1000},
+    "atteso": {"verificare_contiene": "NON abbattuta"},
     "tipo_caso": "comportamento",
     "perche": "Verifica il comportamento del motore, non una regola normativa."
   }

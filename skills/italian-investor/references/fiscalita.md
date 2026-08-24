@@ -5,189 +5,146 @@ I numeri stanno in [regole-correnti.md](regole-correnti.md) e vanno riverificati
 
 ## Lo schema, sempre nello stesso ordine
 
-```
+```text
 ISIN
- → natura giuridica dello strumento (OICR? titolo? derivato cartolarizzato?)
+ → natura giuridica dello strumento
  → evento fiscale (vendita? cedola? dividendo? rimborso? successione?)
  → categoria di reddito (capitale o diverso)
- → regime del contribuente (amministrato / dichiarativo / gestito)
+ → regime del contribuente
+ → broker/intermediario e zainetto disponibile
  → norma applicabile, verificata e citata
 ```
 
 Saltare un passaggio è il modo tipico in cui un LLM sbaglia. Il nome
-commerciale ("ETF governativo", "obbligazionario") non determina nulla.
+commerciale non determina il trattamento fiscale.
 
-## Le due categorie che generano quasi tutti gli errori
+## Redditi di capitale e redditi diversi
 
-Il TUIR distingue **redditi di capitale** (art. 44 e segg.) e **redditi
-diversi** di natura finanziaria (art. 67-68).
+Il TUIR distingue redditi di capitale (art. 44 e segg.) e redditi diversi di
+natura finanziaria (art. 67-68, per i periodi d'imposta fino al 2026).
 
-Testo verificato il 24/08/2026 sul TUIR ufficiale pubblicato dall'Agenzia delle
-Entrate:
+Testo verificato il 24/08/2026:
 
-- **art. 44 c.1 lett. g)**: sono redditi di capitale «i proventi derivanti dalla
-  gestione, nell'interesse collettivo di pluralita' di soggetti, di masse
-  patrimoniali costituite con somme di denaro e beni affidati da terzi o
-  provenienti dai relativi investimenti».
-- **art. 45 c.1**: nei redditi di cui alla lett. g) «e' compresa anche la
-  differenza tra la somma percepita o il valore normale dei beni ricevuti alla
-  scadenza e il prezzo di emissione o la somma impiegata, apportata o affidata
-  in gestione». E' qui che il **guadagno** su un OICR diventa reddito di
-  capitale.
-- **art. 67 c.1 lett. c-ter)**: sono redditi diversi le plusvalenze realizzate
-  «mediante cessione a titolo oneroso ovvero rimborso di titoli non
-  rappresentativi di merci, di certificati di massa, di valute estere [...] e di
-  quote di partecipazione ad organismi d'investimento collettivo».
-- **art. 68 c.5**: le plusvalenze delle lett. c-bis) e c-ter) «sono sommate
-  algebricamente alle relative minusvalenze, nonche' ai redditi ed alle perdite
-  di cui alla lettera c-quater) e alle plusvalenze ed altri proventi di cui alla
-  lettera c-quinquies)»; l'eccedenza negativa «puo' essere portata in deduzione,
-  fino a concorrenza, dalle plusvalenze e dagli altri redditi dei periodi
-  d'imposta successivi **ma non oltre il quarto**, a condizione che sia indicata
-  nella dichiarazione dei redditi relativa al periodo d'imposta» di realizzo.
+- art. 44 c.1 lett. g): proventi della gestione collettiva come redditi di capitale;
+- art. 45 c.1: comprende anche la differenza positiva tra quanto percepito e la somma impiegata/affidata;
+- art. 67 c.1 lett. c-ter): include cessioni/rimborsi di quote OICR tra i redditi diversi;
+- art. 68 c.5: compensazione tra le categorie di redditi diversi indicate dalla norma e riporto dell'eccedenza non oltre il quarto periodo d'imposta successivo.
 
-Messi in fila: la compensazione dell'art. 68 c.5 opera **solo** tra le lettere
-c-bis), c-ter), c-quater) e c-quinquies) dell'art. 67, cioe' tra redditi
-diversi. Il guadagno su un OICR non e' li' dentro: e' reddito di capitale per
-gli artt. 44 e 45. Ecco perche' lo zainetto non lo tocca, mentre la perdita
-sullo stesso ETF rientra nella lett. c-ter) e lo alimenta.
+Conseguenza operativa: il guadagno di un OICR/ETF armonizzato è reddito di
+capitale e non viene abbattuto dallo zainetto; la differenza negativa può invece
+alimentare lo zainetto come reddito diverso nei limiti fiscalmente rilevanti.
 
-L'aliquota ordinaria del 26% e' fissata dall'art. 3 c.1 del DL 66/2014, in
-vigore dal 1o luglio 2014, e si applica sia ai redditi di capitale dell'art. 44
-sia ai redditi diversi dell'art. 67 c.1 lett. da c-bis) a c-quinquies).
+## Zainetto fiscale: broker, regime e scadenza
 
-> Nota di vigenza: dal 1° gennaio 2027 si applica il nuovo testo unico
-> (D.Lgs. 117/2026) e la numerazione degli articoli cambia. Verifica quale
-> testo si applica al periodo d'imposta del caso prima di citare un articolo.
-> Vedi [fonti.md](fonti.md).
+Per un'analisi azionabile non trattare lo zainetto come un solo numero. Per ogni
+lotto conserva almeno:
 
-- I proventi positivi da OICR (fondi, ETF armonizzati) hanno natura di
-  **reddito di capitale**.
-- Le differenze negative da OICR sono trattate come **minusvalenze**, quindi
-  redditi diversi, e alimentano lo "zainetto".
+```text
+broker,regime,anno_realizzo,importo
+```
 
-Da qui l'asimmetria: le **minusvalenze pregresse non abbattono la plusvalenza
-di un ETF**, perché quest'ultima non è un reddito diverso. Vale invece il
-contrario: la minusvalenza generata vendendo un ETF in perdita entra nello
-zainetto ed è utilizzabile su redditi diversi futuri.
+La scadenza è il quarto periodo d'imposta successivo all'anno di realizzo.
+`scripts/zainetto.py` calcola lo stato dei lotti e simula la compensazione.
 
-Cosa genera redditi diversi (quindi compensabili con lo zainetto): azioni,
-obbligazioni singole, ETC/ETN, certificates, valute, derivati.
+- In **regime amministrato**, una vendita usa soltanto le minus disponibili
+  presso lo stesso intermediario, salvo trasferimenti/certificazioni fiscali da
+  gestire come evento separato e documentato.
+- In **regime dichiarativo**, il simulatore può aggregare i lotti marcati
+  dichiarativo ai fini della simulazione annuale.
+- Il simulatore usa prima i lotti con scadenza più vicina per non perderli. È
+  una strategia di simulazione, non una regola imposta al broker sull'ordine
+  contabile delle compensazioni.
 
-Cosa genera redditi di capitale (non compensabili con lo zainetto): plusvalenze
-da OICR/ETF, dividendi, cedole, proventi da fondi.
+Chiedi sempre anno di realizzo/scadenza, broker e regime, non soltanto il totale.
 
-**Verifica sempre** questa qualificazione sul caso concreto: per strumenti
-ibridi o non armonizzati il trattamento cambia. Se lo strumento non è un OICR
-armonizzato UE/SEE, fermati e verifica: il regime può essere diverso e
-concorrere alla formazione del reddito complessivo.
-
-## Zainetto fiscale
-
-- Le minusvalenze sono utilizzabili entro il **quarto** periodo d'imposta
-  successivo a quello di realizzo (art. 68 c.5, verificato il 24/08/2026), a
-  condizione che siano indicate nella dichiarazione dell'anno di realizzo.
-- L'utilizzo avviene su redditi diversi positivi, non su redditi di capitale.
-- In regime amministrato lo zainetto è **per singolo intermediario**: minus
-  presso il broker A non compensano plus presso il broker B senza trasferimento
-  della posizione fiscale.
-- Chiedi sempre gli importi **con l'anno di scadenza**, non il totale.
-
-Non trasformare mai il recupero delle minus in una raccomandazione d'acquisto.
-È un vincolo da considerare, non un obiettivo di investimento.
-
-## Titoli pubblici agevolati: il 48,08% viene PRIMA della compensazione
+## Titoli pubblici agevolati: 48,08% prima della compensazione
 
 Regola verificata il 24/08/2026 sul testo di Normattiva.
 
-L'art. 3 c. 5 del DL 66/2014 (che sostituisce l'ultimo periodo degli artt. 5, 6
-e 7 del D.Lgs. 461/1997, cioe' regime dichiarativo, amministrato e gestito)
-dispone che «i redditi diversi derivanti dalle obbligazioni e dagli altri titoli
-di cui all'articolo 31 del DPR 601/1973 ed equiparati e dalle obbligazioni
-emesse dagli Stati inclusi nella lista [White List] ... **sono computati nella
-misura del 48,08 per cento dell'ammontare realizzato**».
+L'art. 3 c.5 del DL 66/2014 dispone che i redditi diversi derivanti dai titoli
+pubblici agevolati siano computati nella misura del 48,08% dell'ammontare
+realizzato nei regimi richiamati dalla norma.
 
-Conseguenze operative, entrambe facili da sbagliare:
+Conseguenze:
 
-1. **La riduzione precede la compensazione.** Su 1.000 EUR di plusvalenza da BTP
-   con 400 EUR di minusvalenze in zainetto: il reddito diverso e' 480,80 EUR,
-   da cui si sottraggono le minus, quindi imponibile 80,80 EUR e imposta
-   21,01 EUR. Compensare prima e ridurre dopo darebbe 75 EUR: sovrastima
-   l'imposta e spreca minusvalenze.
-2. **Vale anche per le perdite.** Una minusvalenza di 1.000 EUR su un titolo
-   pubblico agevolato entra in zainetto per 480,80 EUR, non per 1.000.
+1. su 1.000 EUR di gain BTP con 400 EUR di minus: 480,80 - 400 = 80,80 EUR imponibili;
+2. una perdita di 1.000 EUR sul titolo pubblico genera 480,80 EUR di minus fiscalmente rilevante.
 
-Attenzione a non estendere questa regola agli OICR: e' un meccanismo diverso.
+Non applicare la stessa meccanica agli OICR: per essi vale la disciplina della
+quota riferibile ai titoli pubblici.
 
-## ETF con componente in titoli di Stato
+## OICR con componente in titoli pubblici
 
-Non esiste "ETF governativo = 12,5%". Il meccanismo è: la quota di provento
-riferibile a titoli pubblici italiani, di Stati White List ed enti assimilati
-beneficia di un'imposizione effettiva ridotta, ottenuta applicando l'aliquota
-ordinaria a una **frazione** della base imponibile.
+Non esiste "ETF governativo = 12,5%". Serve la quota comunicata
+dall'emittente/intermediario.
 
-Conseguenza operativa: serve la **percentuale agevolata comunicata
-dall'emittente o applicata dall'intermediario**. Se non ce l'hai, non stimarla e
-non produrre un importo puntuale: il motore restituisce un **intervallo**
-(imposta con quota 0% e con quota 100%) e marca `dato_mancante`. Riporta
-l'intervallo, mai uno dei due estremi come se fosse il risultato.
+La Circolare Agenzia delle Entrate 19/E del 27/06/2014 chiarisce anche il lato
+negativo: la parte della perdita riferibile ai titoli pubblici è ridotta del
+51,92%, quindi rileva al 48,08%. Il motore applica:
 
-Sulle **perdite** di un OICR con componente governativa il motore non applica
-alcuna riduzione e segnala `NON VERIFICATO`: non e' stata reperita una fonte
-primaria che confermi la riduzione della quota deducibile, e una regola non
-verificata non si implementa. L'importo va quindi trattato come limite
-superiore.
+```text
+perdita_rilevante = perdita * ((1 - quota_stato) + quota_stato * 0,4808)
+```
+
+Se `quota_stato` manca, non viene inventata: il motore restituisce uno scenario
+min/max sia per l'imposta sia per la minusvalenza deducibile.
+
+## ETC/ETN
+
+Non applicare automaticamente la disciplina degli ETF. Borsa Italiana rimanda
+alla sezione `Taxation in Italy` del prospetto/supplemento del singolo ETC/ETN.
+Il motore fa hard-stop finché la qualificazione specifica non è stata verificata.
+
+## Commissioni e oneri inerenti
+
+L'art. 68 c.6 include nel costo gli oneri inerenti alla produzione della
+plus/minus, compresa l'imposta di successione/donazione ed esclusi gli interessi
+passivi. Le istruzioni dell'Agenzia richiamano tra gli esempi anche commissioni
+d'intermediazione, spese notarili e tassa sui contratti di borsa.
 
 ## Regimi
 
-- **Amministrato**: l'intermediario fa da sostituto, tassa operazione per
-  operazione, gestisce lo zainetto. È l'assunzione di default per un retail
-  italiano, ma va confermata.
-- **Dichiarativo**: il contribuente calcola in dichiarazione (quadro RT);
-  cambia la compensazione e i tempi.
-- **Gestito**: si tassa il risultato maturato della gestione, non le singole
-  operazioni. Le regole di compensazione viste sopra **non si applicano allo
-  stesso modo**: se il cliente è in gestito, non riusare l'analisi
-  dell'amministrato.
+- **Amministrato**: l'intermediario applica le imposte operazione per operazione
+  e gestisce lo zainetto.
+- **Dichiarativo**: il contribuente determina i risultati in dichiarazione;
+  cambiano tempi e gestione delle compensazioni.
+- **Gestito**: si tassa il risultato della gestione secondo regole proprie; non
+  riusare meccanicamente le simulazioni dell'amministrato.
 
-Broker esteri senza sostituto d'imposta implicano dichiarativo, quadro RW e
-IVAFE: verifica prima di assumere.
+Broker esteri senza sostituto d'imposta possono comportare dichiarativo, RW e
+IVAFE: verificare il caso concreto.
 
-## Successione: quattro problemi distinti
+## Successione: separare quattro problemi
 
-Non comprimerli mai in una frase sola.
+1. **Attivo ereditario** — il D.Lgs. 346/1990 art. 12 esclude, tra gli altri, i
+   titoli del debito pubblico italiano e i corrispondenti titoli UE/SEE indicati
+   dalla norma. Non confondere questa esclusione con la White List fiscale.
+2. **Imposta di successione** — dipende da bene, rapporto di parentela,
+   franchigie e altre regole vigenti.
+3. **Costo fiscalmente riconosciuto all'erede** — per le fattispecie coperte
+   dall'art. 68 c.6 si assume il valore definito o, in mancanza, dichiarato; per
+   titoli esenti dall'imposta di successione, il valore normale alla data di
+   apertura. Gli oneri inerenti documentabili possono aumentare il costo.
+4. **Futura tassazione** — dipende dalla natura dello strumento e dall'evento
+   futuro; non dedurla dal solo fatto che il bene sia stato ereditato.
 
-1. **Imposta di successione** — dovuta sull'attivo ereditario, con franchigie
-   per grado di parentela. Il Testo unico esclude dall'attivo i titoli del
-   debito pubblico italiano e i titoli equiparati/di Stati UE-SEE previsti
-   dalla norma. Attenzione: "esente da imposta di successione" ≠ "White List";
-   sono elenchi e concetti diversi, da verificare strumento per strumento.
-2. **Costo fiscalmente riconosciuto all'erede** — l'art. 68 TUIR assume come
-   costo il valore dichiarato o definito ai fini dell'imposta di successione;
-   per i titoli esenti da tale imposta si assume il valore normale alla data di
-   apertura della successione. In pratica si produce spesso uno **step-up del
-   costo fiscale**.
-3. **Plusvalenza maturata dal de cuius** — per effetto del punto 2 può non
-   essere tassata in capo all'erede. Non è però un "affrancamento" e non vale
-   indistintamente per ogni strumento e ogni situazione.
-4. **Natura dello strumento** — determina sia il punto 1 sia il punto 2.
+`scripts/successione.py` implementa in modo deterministico soltanto il punto 3
+per azioni/titoli/obbligazioni coperti direttamente dalla regola. ETF/OICR e
+strumenti ibridi richiedono una disciplina specifica: il helper non li assimila
+per analogia.
 
-Quindi: né "in successione si paga tutto", né "in successione gli ETF sono
-affrancati". Entrambe le sintesi sono sbagliate. Rispondi separando i quattro
-livelli e cita la norma per ciascuno.
-
-La donazione segue regole proprie (continuità del costo del donante nei casi
-previsti): non estendere per analogia il ragionamento della successione.
+La donazione segue regole proprie: non estendere il ragionamento della
+successione.
 
 ## Impatto fiscale del ribilanciamento
 
-Prima di suggerire una vendita con plusvalenza latente:
+Prima di suggerire una vendita con gain latente:
 
 1. quantifica l'imposta immediata;
-2. confrontala con il beneficio della riallocazione;
-3. valuta le alternative: nuovi versamenti, ribilanciamento progressivo,
-   vendita selettiva dei lotti con minore gain, uso di flussi (cedole,
-   dividendi) invece che di vendite.
+2. applica soltanto le minus realmente disponibili per broker/regime/anno;
+3. confronta il beneficio della riallocazione con il tax drag;
+4. valuta nuovi versamenti, ribilanciamento progressivo e scelta dei lotti;
+5. verifica commissioni, spread e vincoli operativi.
 
-Usa `scripts/portfolio.py ribilancia` per confrontare le strategie con i numeri
-invece che a intuito.
+Usa `scripts/portfolio.py ribilancia` con `--zainetto-csv` e `--anno-fiscale`
+quando i dati sono disponibili.

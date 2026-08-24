@@ -35,8 +35,6 @@ CATEGORIE = {
                          nota="Obbligazione corporate: capital gain reddito diverso"),
     "titolo_stato": dict(categoria_plus=DIVERSO, categoria_minus=DIVERSO, agevolato=True,
                          nota="Titolo di Stato IT / White List / ente assimilato"),
-    "etc_etn": dict(categoria_plus=DIVERSO, categoria_minus=DIVERSO, agevolato=False,
-                    nota="ETC/ETN: non sono OICR"),
     "certificate": dict(categoria_plus=DIVERSO, categoria_minus=DIVERSO, agevolato=False,
                         nota="Certificate: reddito diverso"),
     "liquidita": dict(categoria_plus=CAPITALE, categoria_minus=None, agevolato=False,
@@ -45,6 +43,9 @@ CATEGORIE = {
 
 # Tipi per cui il motore NON calcola: il regime dipende da elementi da accertare.
 DA_ACCERTARE = {
+    "etc_etn": "ETC/ETN: il trattamento ETF non e' applicabile automaticamente. "
+               "Verificare la sezione 'Taxation in Italy' del prospetto del singolo "
+               "strumento prima di classificarne i proventi.",
     "etf_non_armonizzato": "OICR non armonizzato: il regime puo differire e concorrere "
                            "al reddito complessivo. Verificare caso per caso.",
     "cripto": "Regime delle cripto-attivita modificato piu volte: verificare l'anno "
@@ -62,8 +63,16 @@ FONTI_DA_CITARE = [
     "DL 66/2014 art. 3 c. 5 (redditi diversi da titoli pubblici computati al 48,08%) - "
     "Normattiva: https://www.normattiva.it/uri-res/N2Ls?urn:nir:stato:"
     "decreto.legge:2014-04-24;66~art3",
+    "Agenzia delle Entrate, Circolare 19/E del 27/06/2014 (OICR: proventi e perdite "
+    "riferibili a titoli pubblici computati al netto del 51,92%): "
+    "https://def.finanze.it/DocTribFrontend/getPrassiDetail.do?id="
+    "%7B7953D773-A884-4630-A7EB-EF5187839207%7D",
     "Istruzioni ai modelli dichiarativi / prassi Agenzia delle Entrate: "
     "https://www.agenziaentrate.gov.it/portale/",
+    "Borsa Italiana, ETC/ETN - Valori Ufficiali: per la fiscalita' rimanda alla "
+    "sezione 'Taxation in Italy' dei Supplementi ai Prospetti di emissione: "
+    "https://www.borsaitaliana.it/etc-etn/statisticheetc/valoriufficialicopy/"
+    "valoriufficialicopy.htm",
     "Vigenza: dal 01/01/2027 si applica il nuovo testo unico D.Lgs. 117/2026 e la "
     "numerazione degli articoli cambia. Verificare il periodo d'imposta del caso.",
 ]
@@ -117,13 +126,32 @@ def simula_vendita(tipo, pmc, prezzo, quantita, minus_disponibili=0.0,
       del 48,08% dell'ammontare realizzato (art. 3 c. 5 DL 66/2014, che
       modifica gli artt. 5, 6 e 7 del D.Lgs. 461/1997). La riduzione precede
       quindi la compensazione con lo zainetto, e vale anche per le perdite.
-    - OICR/ETF con componente in titoli pubblici: il provento e' reddito di
-      capitale e la componente agevolata sconta il 26% su base ridotta.
+    - OICR/ETF con componente in titoli pubblici: proventi e perdite riferibili
+      alla componente pubblica sono computati al 48,08%; sulla parte restante
+      si applica il regime ordinario.
     """
     info = classifica(tipo)
     if not info["calcolabile"]:
         return {"errore": info["motivo"], "verificare": info["verificare"],
                 "fonti": info["fonti"], "imposta_stimata": None}
+
+    if quota_stato is not None:
+        try:
+            quota_stato = float(quota_stato)
+        except (TypeError, ValueError):
+            return {
+                "errore": "quota_stato deve essere un numero compreso tra 0 e 1.",
+                "verificare": ["Quota agevolata non valida"],
+                "fonti": info["fonti"],
+                "imposta_stimata": None,
+            }
+        if not 0.0 <= quota_stato <= 1.0:
+            return {
+                "errore": "quota_stato deve essere compresa tra 0 e 1, non %.4g." % quota_stato,
+                "verificare": ["Quota agevolata fuori intervallo: non viene corretta automaticamente"],
+                "fonti": info["fonti"],
+                "imposta_stimata": None,
+            }
 
     verificare = []
     costi = max(0.0, float(costi))
@@ -158,14 +186,42 @@ def simula_vendita(tipo, pmc, prezzo, quantita, minus_disponibili=0.0,
                               "misura del 48,08%% dell'ammontare realizzato (%.2f su "
                               "%.2f), art. 3 c. 5 DL 66/2014."
                               % (minus_generate, perdita))
+        elif e_oicr:
+            if quota_stato is None:
+                minus_max = perdita
+                minus_min = perdita * FRAZIONE_IMPONIBILE_AGEVOLATA
+                out.update({
+                    "imposta_stimata": 0.0,
+                    "minusvalenza_generata": None,
+                    "zainetto_dopo": None,
+                    "dato_mancante": "quota_stato",
+                    "minusvalenza_scenario": {
+                        "quota_agevolata_0": r(minus_max),
+                        "quota_agevolata_100": r(minus_min),
+                    },
+                })
+                verificare.append(
+                    "Quota di titoli di Stato/White List del fondo NON FORNITA: la "
+                    "minusvalenza deducibile non e' puntualmente calcolabile. La "
+                    "Circolare 19/E del 27/06/2014 riduce del 51,92% la parte della "
+                    "perdita riferibile ai titoli pubblici."
+                )
+                verificare.append("Minusvalenze utilizzabili entro il 4o anno successivo a quello "
+                                  "di realizzo: verificare il termine vigente.")
+                return out
+            quota_ordinaria = 1.0 - quota_stato
+            minus_generate = perdita * (
+                quota_ordinaria + quota_stato * FRAZIONE_IMPONIBILE_AGEVOLATA
+            )
+            verificare.append(
+                "Perdita OICR: la parte riferibile a titoli pubblici (%.2f%%) e' "
+                "computata al 48,08%%; minus deducibile %.2f su perdita %.2f. "
+                "Circolare Agenzia Entrate 19/E del 27/06/2014."
+                % (quota_stato * 100, minus_generate, perdita)
+            )
         else:
             minus_generate = perdita
-            if quota_stato:
-                verificare.append("NON VERIFICATO: la quota della perdita riferibile a "
-                                  "titoli pubblici (%.2f%%) potrebbe rilevare in misura "
-                                  "ridotta. Importo indicato al lordo: verificare prima "
-                                  "di considerarlo utilizzabile per intero."
-                                  % (clamp01(quota_stato) * 100))
+
         out.update({
             "imposta_stimata": 0.0,
             "minusvalenza_generata": r(minus_generate),
@@ -218,7 +274,7 @@ def simula_vendita(tipo, pmc, prezzo, quantita, minus_disponibili=0.0,
                               "non verificati (references/regole-correnti.md).")
             return out
 
-        quota_agev = clamp01(quota_stato or 0.0)
+        quota_agev = quota_stato or 0.0
         base_agevolata = imponibile * quota_agev
         base_ordinaria = imponibile - base_agevolata
         imposta = (base_ordinaria * ALIQUOTA_ORDINARIA
@@ -246,10 +302,6 @@ def simula_vendita(tipo, pmc, prezzo, quantita, minus_disponibili=0.0,
         "aliquota_effettiva_su_risultato": r(imposta / risultato),
     })
     return out
-
-
-def clamp01(x):
-    return max(0.0, min(1.0, float(x)))
 
 
 def r(x):

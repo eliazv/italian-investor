@@ -1,0 +1,44 @@
+[
+  {
+    "nome": "Azione ereditata: valore dichiarato diventa costo fiscale base",
+    "tipo_caso": "normativo",
+    "fonte": "TUIR art. 68 c.6 - Normattiva",
+    "articolo": "Nel caso di acquisto per successione si assume come costo il valore definito o, in mancanza, quello dichiarato agli effetti dell'imposta di successione.",
+    "verificato_il": "2026-08-24",
+    "input": {"tipo": "azione", "valore_dichiarato": 10000, "valore_corrente": 12000},
+    "atteso": {"costo_base": 10000.0, "costo_fiscale_riconosciuto": 10000.0, "differenza_vs_costo_fiscale": 2000.0}
+  },
+  {
+    "nome": "Valore definito prevale sul valore dichiarato",
+    "tipo_caso": "normativo",
+    "fonte": "TUIR art. 68 c.6 - Normattiva",
+    "articolo": "Il costo e' il valore definito o, in mancanza, quello dichiarato agli effetti dell'imposta di successione.",
+    "verificato_il": "2026-08-24",
+    "input": {"tipo": "azione", "valore_dichiarato": 10000, "valore_definito": 10800},
+    "atteso": {"criterio_costo": "valore_definito_imposta_successione", "costo_base": 10800.0}
+  },
+  {
+    "nome": "Titolo esente: costo fiscale al valore normale alla data di apertura",
+    "tipo_caso": "normativo",
+    "fonte": "TUIR art. 68 c.6 - Normattiva",
+    "articolo": "Per i titoli esenti dall'imposta di successione si assume il valore normale alla data di apertura della successione.",
+    "verificato_il": "2026-08-24",
+    "input": {"tipo": "titolo_stato", "valore_normale": 10250, "esente_successione": true},
+    "atteso": {"criterio_costo": "valore_normale_data_apertura", "costo_base": 10250.0, "esente_imposta_successione": true}
+  },
+  {
+    "nome": "Imposta di successione attribuibile aumenta il costo fiscale",
+    "tipo_caso": "normativo",
+    "fonte": "TUIR art. 68 c.6 - Normattiva; istruzioni Agenzia delle Entrate sulla base imponibile",
+    "articolo": "Il costo e' aumentato di ogni onere inerente alla produzione, compresa l'imposta di successione e donazione.",
+    "verificato_il": "2026-08-24",
+    "input": {"tipo": "azione", "valore_dichiarato": 10000, "imposta_successione_attribuita": 300},
+    "atteso": {"costo_base": 10000.0, "imposta_successione_attribuita": 300.0, "costo_fiscale_riconosciuto": 10300.0}
+  },
+  {
+    "nome": "ETF in successione: hard stop, niente estensione per analogia",
+    "tipo_caso": "comportamento",
+    "input": {"tipo": "etf", "valore_dichiarato": 10000},
+    "atteso": {"errore_atteso": true}
+  }
+]

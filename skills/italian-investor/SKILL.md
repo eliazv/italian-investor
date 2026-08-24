@@ -8,83 +8,156 @@ description: Analisi di portafoglio tax-aware per residenti fiscali italiani. Da
 Analisi di portafoglio per un residente fiscale italiano, con la fiscalità
 trattata come **dato da verificare**, non come conoscenza del modello.
 
-Questa skill non contiene "la risposta fiscale". Contiene la **procedura** per
-arrivarci senza allucinare, più un motore deterministico in Python per i calcoli.
+La skill contiene una procedura anti-allucinazione e piccoli motori Python
+deterministici. Il modello interpreta e spiega; non deve inventare norme,
+classificazioni di strumenti o aritmetica fiscale.
 
 ## Regola zero
 
 Non usare mai la memoria interna del modello per:
 
-- aliquote vigenti;
+- aliquote vigenti e basi imponibili;
 - trattamento fiscale di uno strumento;
-- compensabilità di minusvalenze;
+- compensabilità e scadenza delle minusvalenze;
 - imposta di successione e costo fiscale dell'erede;
-- caratteristiche di un prodotto (TER, duration, holdings, valuta, ISIN).
+- caratteristiche di prodotto (TER, duration, holdings, valuta, ISIN,
+  percentuale di titoli pubblici agevolati).
 
 Se non trovi una fonte autorevole: **non dedurre la regola**. Scrivi
 `NON VERIFICATO` e blocca la conclusione che ne dipende.
 
-Non inventare mai: ISIN, TER, rendimento, duration, rating, composizione del
-fondo, quota di titoli di Stato, esposizione valutaria. Se il dato manca, va
-chiesto all'utente o recuperato dal KID/prospetto.
-
 ## Procedura
 
 1. **Profilo.** Verifica residenza fiscale, regime (amministrato / dichiarativo
-   / gestito), broker, orizzonte, target di allocazione, minusvalenze in
-   zainetto con anno di scadenza. Se il regime non è noto, chiedilo: cambia
-   completamente chi calcola e versa l'imposta.
-2. **Strumenti.** Per ogni riga risali a `ISIN → natura giuridica → categoria
-   fiscale`. Mai dedurre il trattamento dal nome commerciale. Un "ETF
-   obbligazionario governativo" non è automaticamente al 12,5%: serve la quota
-   agevolata comunicata dall'emittente/intermediario.
-3. **Calcoli.** Esegui i numeri con `scripts/`, non a mente. Vedi
-   [scripts/portfolio.py](scripts/portfolio.py) e
-   [scripts/tax_engine.py](scripts/tax_engine.py).
-4. **Norma.** Per ogni conclusione fiscale rilevante recupera una fonte
-   corrente secondo [references/fonti.md](references/fonti.md) e cita
-   articolo/circolare con la data.
-5. **Separazione.** Distingui sempre `dato → legge → calcolo → opinione`.
-6. **Claim audit.** Chiudi ogni analisi con la tabella di audit (sotto).
-7. **Revisione avversariale.** Prima di consegnare, rileggi le tue
-   raccomandazioni cercando attivamente almeno cinque motivi per cui potrebbero
-   essere sbagliate: fiscalità, esposizione valutaria, concentrazione,
-   assunzioni sui rendimenti, costi di transazione.
-8. **Stop.** Se manca un dato che cambierebbe la conclusione (regime, PMC,
-   quota agevolata, scadenza delle minus), fermati e chiedilo. Non stimarlo.
+   / gestito), broker, orizzonte, target e minusvalenze con anno di realizzo.
+2. **Strumenti.** Parti sempre da `ISIN → natura giuridica → categoria fiscale`.
+   Il campo `tipo` del CSV è una dichiarazione dell'utente, non una prova. Usa
+   `scripts/instrument_resolver.py` o il registry ISIN verificato. Non dedurre
+   il tipo dal prefisso ISIN o dal nome commerciale. Per ETC/ETN consulta la
+   sezione `Taxation in Italy` del prospetto specifico.
+3. **Zainetto.** Preferisci il CSV strutturato a un saldo unico. Ogni lotto deve
+   avere `broker, regime, anno_realizzo, importo`. In amministrato una vendita
+   usa solo le minus disponibili presso lo stesso intermediario e non scadute;
+   in dichiarativo il simulatore può aggregare i lotti marcati dichiarativo.
+4. **Calcoli.** Esegui i numeri con gli script, non a mente. Per il portfolio usa
+   `portfolio.py`; per una vendita `tax_engine.py`; per lo zainetto
+   `zainetto.py`; per successione `successione.py`.
+5. **Norma.** Per ogni conclusione fiscale rilevante recupera una fonte
+   corrente secondo [references/fonti.md](references/fonti.md), verificane la
+   vigenza alla data rilevante e cita norma/articolo/circolare.
+6. **Separazione.** Distingui sempre `dato → legge → calcolo → opinione`.
+7. **Claim audit.** Chiudi ogni analisi con la tabella di audit.
+8. **Revisione avversariale.** Cerca attivamente errori su fiscalità,
+   classificazione strumento, valuta, concentrazione, assunzioni sui rendimenti,
+   costi e ordine delle operazioni.
+9. **Stop.** Se manca un dato che può cambiare la conclusione (regime, broker,
+   PMC, quota agevolata, scadenza minus, KID/prospetto), fermati. Non stimarlo.
 
 ## Riferimenti
 
-- [references/fonti.md](references/fonti.md) — gerarchia delle fonti e quando
-  una claim va verificata.
-- [references/fiscalita.md](references/fiscalita.md) — come ragionare su
-  redditi di capitale vs redditi diversi, zainetto, successione.
-- [references/regole-correnti.md](references/regole-correnti.md) — i numeri che
-  cambiano nel tempo, con data di ultima verifica. **Ricontrollali** prima di
-  usarli.
+- [references/fonti.md](references/fonti.md) — gerarchia delle fonti e vigenza.
+- [references/fiscalita.md](references/fiscalita.md) — redditi di capitale vs
+  diversi, titoli pubblici, OICR, zainetto, successione.
+- [references/regole-correnti.md](references/regole-correnti.md) — valori
+  variabili nel tempo, con data di verifica.
 
 ## Script
 
-Tutti gli script sono stdlib-only, senza dipendenze, e stampano JSON.
+Tutti gli script sono stdlib-only e stampano JSON.
 
 ```bash
+# Analisi base
 python scripts/portfolio.py analizza portafoglio.csv
-python scripts/portfolio.py ribilancia portafoglio.csv --target azionario=70,obbligazionario=25,liquidita=5
-python scripts/tax_engine.py vendita --tipo etf --pmc 90 --prezzo 120 --quantita 100 --minus 2000
-python scripts/tax_engine.py classifica --tipo btp
+
+# Zainetto strutturato per broker e scadenza
+python scripts/zainetto.py stato zainetto.csv --anno-fiscale 2026
+python scripts/zainetto.py compensa zainetto.csv --importo 700 \
+  --broker Directa --regime amministrato --anno-fiscale 2026
+
+# Ribilanciamento usando il vero zainetto fiscale disponibile per posizione
+python scripts/portfolio.py ribilancia portafoglio.csv \
+  --target azionario=70,obbligazionario=25,liquidita=5 \
+  --zainetto-csv zainetto.csv --anno-fiscale 2026 --regime amministrato
+
+# Verifica ISIN/tipo contro un registry costruito da KID/prospetti verificati
+python scripts/instrument_resolver.py resolve \
+  --isin US0378331005 --tipo azione --registry strumenti.csv
+
+# Blocca il portfolio se anche uno strumento non e' verificato
+python scripts/portfolio.py analizza portafoglio.csv \
+  --registry strumenti.csv --strict-instruments
+
+# Successione: solo casi coperti esplicitamente dal motore
+python scripts/successione.py costo --tipo azione --valore-dichiarato 10000
+python scripts/successione.py costo --tipo titolo_stato \
+  --esente-successione --valore-normale 10250
+
+# Test
 python tests/run_tests.py
+python tests/run_support_tests.py
 ```
 
-Formato del CSV atteso: vedi
-[examples/portafoglio-esempio.csv](examples/portafoglio-esempio.csv).
+Esempi:
 
-Gli script restituiscono, oltre ai numeri, i campi `verificare` e `fonti`:
-riportali nell'output finale, non scartarli.
+- [examples/portafoglio-esempio.csv](examples/portafoglio-esempio.csv)
+- [examples/zainetto-esempio.csv](examples/zainetto-esempio.csv)
+- [examples/strumenti-registry-esempio.csv](examples/strumenti-registry-esempio.csv)
 
-Quando un dato necessario manca, il motore **non produce un importo singolo**:
-restituisce `imposta_stimata: null`, il campo `dato_mancante` e un
-`imposta_scenario` con i due estremi. In quel caso riporta l'intervallo e chiedi
-il dato: non scegliere un estremo e non presentarlo come stima.
+## Instrument resolver
+
+Il resolver **non cerca di indovinare** che cosa sia un ISIN. Valida il check
+digit ISO 6166/Luhn e, se gli viene fornito un registry, confronta il tipo del
+portfolio con una classificazione verificata su KID/prospetto.
+
+Una riga di registry è azionabile solo con:
+
+```text
+isin,tipo,fonte,verificato_il
+```
+
+Se l'ISIN non è nel registry, il tipo è incoerente o mancano fonte/data, la
+conclusione fiscale va bloccata in modalità `--strict-instruments`.
+
+## Zainetto strutturato
+
+Formato:
+
+```text
+broker,regime,anno_realizzo,importo
+Directa,amministrato,2022,500
+Directa,amministrato,2024,1200
+IBKR,dichiarativo,2023,800
+```
+
+La scadenza viene calcolata come quarto periodo d'imposta successivo all'anno
+di realizzo. Il simulatore consuma prima i lotti con scadenza più vicina per
+minimizzare il rischio di perderli: **questa è una strategia del simulatore, non
+una regola contabile imposta al broker**.
+
+`--minus 2000` resta disponibile solo come modalità legacy semplificata.
+
+## Successione
+
+Non usare mai la parola "affrancamento" come scorciatoia. Separa almeno:
+
+1. inclusione/esclusione dall'attivo ereditario;
+2. eventuale imposta di successione;
+3. costo fiscalmente riconosciuto all'erede;
+4. futura tassazione del rendimento/cessione, che dipende dalla natura dello
+   strumento.
+
+`scripts/successione.py` implementa soltanto i casi direttamente coperti dalla
+regola dell'art. 68 c.6 per azioni/titoli/obbligazioni: valore definito o, in
+mancanza, dichiarato; per titoli esenti, valore normale alla data di apertura;
+oneri inerenti documentabili aggiunti al costo. Per ETF/OICR e strumenti
+ibridi il modulo fa hard-stop invece di estendere la regola per analogia.
+
+## Output incompleto
+
+Quando un dato necessario manca, il motore non produce falsa precisione. Può
+restituire `imposta_stimata: null`, `dato_mancante` e uno scenario min/max. Lo
+stesso vale per la minusvalenza fiscalmente rilevante di un OICR quando manca
+la percentuale agevolata.
 
 ## Claim audit (obbligatoria)
 
@@ -92,20 +165,22 @@ il dato: non scegliere un estremo e non presentarlo come stima.
 | --- | --- | --- | --- | --- |
 | ... | dato / legge / calcolo / opinione | ... | ... | Alta/Media/Bassa |
 
-Una riga per ogni affermazione che influenza una decisione. Se una riga ha
-confidenza Bassa o fonte assente, la raccomandazione collegata va marcata come
-non azionabile.
+Una riga per ogni affermazione che può influenzare una decisione. Se fonte o
+confidenza non sono adeguate, marca la conclusione come non azionabile.
 
 ## Limiti
 
 Questa skill produce **analisi e simulazioni**, non consulenza finanziaria né
-fiscale. Non suggerire operazioni motivate solo dal recupero di minusvalenze.
-Le imposte effettive le calcola e le versa l'intermediario in regime
-amministrato: i numeri qui sono stime da confrontare con il rendiconto fiscale.
+fiscale. Le imposte effettive in amministrato restano quelle determinate
+dall'intermediario. Non suggerire operazioni motivate soltanto dal recupero di
+minusvalenze.
 
-## Convenzioni del CSV
+## Convenzioni portfolio CSV
+
+Colonne richieste: `isin,nome,tipo,quantita,pmc,prezzo,asset_class`.
+Consigliate: `valuta_esposizione,area,settore,broker,quota_stato`.
 
 Obbligazioni: `quantita` = valore nominale, `pmc` e `prezzo` in frazione
-(corso 101,30 → `1.0130`). `valuta_esposizione` è la valuta dei sottostanti,
-non quella di quotazione. `quota_stato` (0–1) è la quota agevolata comunicata
-dall'emittente: se manca, il calcolo gira a 0% e lo dichiara.
+(corso 101,30 → `1.0130`). `valuta_esposizione` è la valuta economica dei
+sottostanti, non quella di quotazione. `quota_stato` è compresa tra 0 e 1 e
+deve provenire dall'emittente/intermediario; se manca non assumere 0.
