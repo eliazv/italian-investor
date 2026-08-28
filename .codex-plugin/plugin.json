@@ -21,6 +21,8 @@
   ],
   "skills": "./skills/",
   "interface": {
+    "logo": "./assets/logo.png",
+    "composerIcon": "./assets/logo.png",
     "displayName": "Italian Investor",
     "shortDescription": "Tax-aware portfolio analysis for Italian investors",
     "longDescription": "Analyze portfolio allocation, simulated sales, tax-loss carryforwards, rebalancing and covered Italian tax scenarios using deterministic Python calculations and verified primary sources. Analysis and simulation only; not financial or tax advice.",

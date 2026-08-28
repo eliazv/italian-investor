@@ -47,7 +47,9 @@ For this repository:
 - Privacy: `https://github.com/eliazv/italian-investor/blob/main/PRIVACY.md`
 - Terms: `https://github.com/eliazv/italian-investor/blob/main/TERMS.md`
 
-A production-ready logo still needs to be uploaded in the portal.
+`assets/logo.png` (square, 512x512) is referenced from `interface.logo` and
+`interface.composerIcon` in both `.claude-plugin/plugin.json` and
+`.codex-plugin/plugin.json`, and is bundled into the submission archive.
 
 ### Build the archive
 
