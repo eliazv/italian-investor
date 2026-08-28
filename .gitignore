@@ -6,5 +6,8 @@ portafoglio*.csv
 !skills/italian-investor/examples/portafoglio-esempio.csv
 *.xlsx
 
+# Build/distribution output
+dist/
+
 # Materiale di lavoro, non distribuito
 analisi.md
