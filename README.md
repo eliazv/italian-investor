@@ -1,4 +1,4 @@
-# Italian Investor — Claude Skill per l'analisi di portafoglio e la fiscalità italiana
+# Italian Investor — Agent Skill per l'analisi di portafoglio e la fiscalità italiana
 
 [![test](https://github.com/eliazv/italian-investor/actions/workflows/tests.yml/badge.svg)](https://github.com/eliazv/italian-investor/actions/workflows/tests.yml)
 
@@ -14,6 +14,18 @@ casi di successione. ETC/ETN e strumenti con trattamento non generalizzabile
 vengono bloccati finché non viene verificato il prospetto specifico.
 
 > Analisi e simulazione, **non** consulenza finanziaria né fiscale e non un software per compilare automaticamente la dichiarazione dei redditi.
+
+## Compatibilità e distribuzione
+
+La sorgente canonica e provider-neutral è `skills/italian-investor/`.
+
+- **Claude Code**: plugin installabile tramite il marketplace GitHub incluso in `.claude-plugin/`.
+- **ChatGPT + Codex**: plugin OpenAI skills-only, con manifest nativo in `.codex-plugin/plugin.json` e marketplace repo in `.agents/plugins/marketplace.json` per test/distribuzione locale.
+- **OpenAI Skills API**: la stessa directory Agent Skill può essere caricata e versionata in un progetto API senza duplicare le istruzioni.
+
+La pubblicazione nella Plugin Directory e il caricamento tramite Skills API sono due flussi separati: la Skills API non rende automaticamente pubblica la skill nella directory.
+
+Per procedura di submission, test reviewer e upload API vedi **[OPENAI.md](OPENAI.md)**.
 
 ## Cosa evita
 
@@ -31,7 +43,7 @@ Errori tipici che un LLM generalista può commettere:
 
 ## Installazione
 
-Claude Code:
+### Claude Code
 
 ```bash
 /plugin marketplace add eliazv/italian-investor
@@ -45,7 +57,28 @@ git clone https://github.com/eliazv/italian-investor.git
 cp -r italian-investor/skills/italian-investor ~/.claude/skills/
 ```
 
-Serve solo Python 3; gli script non hanno dipendenze esterne.
+### ChatGPT / Codex
+
+Il repository contiene il manifest OpenAI `.codex-plugin/plugin.json` e un repo marketplace `.agents/plugins/marketplace.json`. Per sviluppo/test apri il repository come progetto, riavvia ChatGPT desktop dopo modifiche al marketplace/plugin e verifica **Italian Investor** tra i plugin disponibili sulle superfici in cui i repo marketplace sono abilitati.
+
+Per pubblicarlo nella directory universale ChatGPT + Codex usa il **Plugin Submission Portal**, scegliendo **Skills only**. La checklist completa e i materiali reviewer sono in [OPENAI.md](OPENAI.md) e [openai/submission-tests.md](openai/submission-tests.md).
+
+### OpenAI Skills API
+
+Con una API key OpenAI configurata:
+
+```bash
+export OPENAI_API_KEY="..."
+bash ./tools/openai/upload-skill.sh
+```
+
+Per creare una nuova versione di una skill API esistente e impostarla come default:
+
+```bash
+bash ./tools/openai/upload-skill.sh skill_XXXXXXXX
+```
+
+Il core della skill richiede solo Python 3; l'helper opzionale per la Skills API richiede `curl` e `zip`.
 
 ## Flusso consigliato
 
@@ -65,7 +98,7 @@ motore fiscale deterministico
 ribilanciamento / scenari
           |
           v
-Claude: interpretazione + claim audit + fonti
+modello: interpretazione + claim audit + fonti
 ```
 
 La skill **non è un provider di market data**: prezzi, holdings, duration,
@@ -180,6 +213,15 @@ La skill chiude le analisi con un **claim audit**:
 ## Struttura
 
 ```text
+.codex-plugin/plugin.json
+.agents/plugins/marketplace.json
+.claude-plugin/
+OPENAI.md
+PRIVACY.md
+SUPPORT.md
+TERMS.md
+openai/submission-tests.md
+tools/openai/upload-skill.sh
 skills/italian-investor/
 ├── SKILL.md
 ├── references/
@@ -208,6 +250,12 @@ skills/italian-investor/
 **v0.4.0**. Le regole portanti sono corredate da riferimenti normativi/prassi e test automatici. La CI esegue casi fiscali, zainetto, resolver ISIN, successione e smoke test del flusso portfolio.
 
 Il nuovo testo unico delle imposte sui redditi (D.Lgs. 117/2026) è applicabile dal 1° gennaio 2027 e cambia la numerazione dei riferimenti: la skill impone di verificare il testo vigente per il periodo d'imposta analizzato.
+
+## Supporto e policy
+
+- [Supporto](SUPPORT.md)
+- [Privacy policy](PRIVACY.md)
+- [Termini d'uso](TERMS.md)
 
 ## Licenza
 
