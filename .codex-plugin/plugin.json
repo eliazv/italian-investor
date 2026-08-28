@@ -1,6 +1,6 @@
 {
   "name": "italian-investor",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Tax-aware portfolio analysis for Italian tax residents with deterministic calculations and primary-source verification.",
   "author": {
     "name": "Elia Zavatta",
@@ -31,10 +31,9 @@
     "privacyPolicyURL": "https://github.com/eliazv/italian-investor/blob/main/PRIVACY.md",
     "termsOfServiceURL": "https://github.com/eliazv/italian-investor/blob/main/TERMS.md",
     "defaultPrompt": [
-      "Analyze this portfolio for allocation, concentration and Italian tax considerations.",
-      "Simulate this sale and explain the Italian tax treatment with verified sources.",
-      "Review my tax-loss carryforward by broker and expiration year.",
-      "Compare two rebalancing scenarios and separate data, law, calculations and opinions."
+      "Analizza questo portafoglio: allocazione, concentrazione, rischi e fiscalità per un investitore italiano.",
+      "Simula questa vendita e calcola plusvalenze, minusvalenze e imposte con fonti primarie verificate.",
+      "Confronta due ribilanciamenti considerando fiscalità, zainetto fiscale e scadenza delle minusvalenze."
     ]
   }
 }

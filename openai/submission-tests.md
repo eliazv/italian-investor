@@ -4,10 +4,11 @@ Ready-to-copy reviewer material for the **Italian Investor** skills-only plugin.
 
 ## Starter prompts
 
-- Analyze this portfolio for allocation, concentration, and Italian tax considerations without inventing missing tax data.
-- Simulate this sale and explain the Italian tax treatment, separating source facts, law, calculations, and opinion.
-- Review my tax-loss carryforwards by broker and expiration year under the Italian administered regime.
-- Compare two portfolio rebalancing scenarios and show the tax consequences and missing assumptions.
+Published in the Plugin Directory listing (Italian, matching the rest of the listing copy):
+
+- Analizza questo portafoglio: allocazione, concentrazione, rischi e fiscalità per un investitore italiano.
+- Simula questa vendita e calcola plusvalenze, minusvalenze e imposte con fonti primarie verificate.
+- Confronta due ribilanciamenti considerando fiscalità, zainetto fiscale e scadenza delle minusvalenze.
 
 ## Positive test 1 — portfolio analysis with verified instruments
 
