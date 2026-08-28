@@ -12,13 +12,15 @@ These are separate distribution mechanisms. Uploading a skill with the Skills AP
 OpenAI-native packaging lives alongside the existing Claude packaging:
 
 ```text
-.codex-plugin/plugin.json            # OpenAI plugin manifest
-.agents/plugins/marketplace.json      # repo-scoped marketplace for local testing
-.claude-plugin/plugin.json            # Claude Code manifest; also accepted by OpenAI's importer
-skills/italian-investor/              # provider-neutral Agent Skill (source of truth)
-openai/submission-tests.md            # review fixtures / expected behavior
-tools/openai/upload-skill.sh          # optional Skills API upload helper
+.codex-plugin/plugin.json              # OpenAI plugin manifest
+.agents/plugins/marketplace.json        # repo-scoped marketplace for local testing
+.claude-plugin/plugin.json              # Claude Code manifest; also accepted by OpenAI's importer
+skills/italian-investor/                # provider-neutral Agent Skill (source of truth)
+openai/submission-tests.md              # review fixtures / expected behavior
+tools/openai/build-plugin-archive.sh    # builds the public-submission archive
+tools/openai/upload-skill.sh            # optional Skills API upload helper
 PRIVACY.md
+SUPPORT.md
 TERMS.md
 ```
 
@@ -41,28 +43,43 @@ The OpenAI Platform organization used for publishing must have:
 For this repository:
 
 - Website: `https://github.com/eliazv/italian-investor` (or a dedicated public landing page if available)
-- Support: `https://github.com/eliazv/italian-investor/issues`
+- Support: `https://github.com/eliazv/italian-investor/blob/main/SUPPORT.md`
 - Privacy: `https://github.com/eliazv/italian-investor/blob/main/PRIVACY.md`
 - Terms: `https://github.com/eliazv/italian-investor/blob/main/TERMS.md`
 
 A production-ready logo still needs to be uploaded in the portal.
 
+### Build the archive
+
+The repository includes a deterministic packaging helper:
+
+```bash
+bash ./tools/openai/build-plugin-archive.sh
+```
+
+It creates:
+
+```text
+dist/italian-investor-openai.zip
+```
+
+with one top-level `italian-investor/` directory containing the native OpenAI manifest, the Agent Skill and the public policy/support files. `dist/` is only a local build output and does not need to be committed.
+
 ### Submission path
 
 Italian Investor is currently **skills-only**: it does not need an MCP server or authentication.
 
-1. Create a ZIP whose archive root, or single top-level directory, contains the repository/plugin files.
-2. Open the OpenAI Plugin Submission Portal.
-3. Select **Create plugin**.
-4. Select **Skills only**.
-5. Upload the archive.
-6. Review the imported/generated `.codex-plugin/plugin.json` and resolve any scanner findings.
-7. Complete listing metadata, starter prompts, countries/regions, release notes, and policy attestations.
-8. Enter at least **5 positive** and **3 negative** reviewer test cases. Ready-to-copy cases are in `openai/submission-tests.md`.
-9. Test the skill in a clean environment and submit it for review.
-10. After approval, choose when to publish it. Publication makes it available in the universal Plugins Directory shared by ChatGPT and Codex.
+1. Open the OpenAI Plugin Submission Portal.
+2. Select **Create plugin**.
+3. Select **Skills only**.
+4. Upload `dist/italian-investor-openai.zip` (or another equivalent valid plugin archive).
+5. Review the imported/generated `.codex-plugin/plugin.json` and resolve any scanner findings.
+6. Complete listing metadata, starter prompts, countries/regions, release notes, and policy attestations.
+7. Enter at least **5 positive** and **3 negative** reviewer test cases. Ready-to-copy cases are in `openai/submission-tests.md`.
+8. Test the skill in a clean environment and submit it for review.
+9. After approval, choose when to publish it. Publication makes it available in the universal Plugins Directory shared by ChatGPT and Codex.
 
-The existing `.claude-plugin/plugin.json` is also eligible for OpenAI's direct Claude-plugin import path; OpenAI can convert it into a `.codex-plugin/plugin.json`. This repository also includes the native OpenAI manifest so the package can be tested and maintained explicitly on both ecosystems.
+The existing `.claude-plugin/plugin.json` is also eligible for OpenAI's direct Claude-plugin import path; OpenAI can convert it into a `.codex-plugin/plugin.json`. This repository includes the native OpenAI manifest too, so the package can be tested and maintained explicitly on both ecosystems.
 
 ## B. Test the OpenAI plugin from the repository
 
@@ -87,7 +104,7 @@ Create a new API skill:
 
 ```bash
 export OPENAI_API_KEY="..."
-./tools/openai/upload-skill.sh
+bash ./tools/openai/upload-skill.sh
 ```
 
 The command prints the API response, including the generated skill ID.
@@ -96,7 +113,7 @@ Create a new immutable version of an existing API skill and make it the default:
 
 ```bash
 export OPENAI_API_KEY="..."
-./tools/openai/upload-skill.sh skill_XXXXXXXX
+bash ./tools/openai/upload-skill.sh skill_XXXXXXXX
 ```
 
 The helper only packages `skills/italian-investor/`; it does not upload Claude/OpenAI marketplace manifests because those belong to plugin distribution rather than the Agent Skill itself.
