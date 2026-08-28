@@ -13,9 +13,11 @@ TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
 PACKAGE_ROOT="$TMP_DIR/italian-investor"
-mkdir -p "$PACKAGE_ROOT"
+mkdir -p "$PACKAGE_ROOT/.claude-plugin"
 
-cp -R "$REPO_ROOT/.codex-plugin" "$PACKAGE_ROOT/.codex-plugin"
+# OpenAI explicitly supports direct upload of a skills-only Claude Code plugin
+# and converts this manifest to .codex-plugin/plugin.json in the submission portal.
+cp "$REPO_ROOT/.claude-plugin/plugin.json" "$PACKAGE_ROOT/.claude-plugin/plugin.json"
 cp -R "$REPO_ROOT/skills" "$PACKAGE_ROOT/skills"
 cp "$REPO_ROOT/LICENSE" "$PACKAGE_ROOT/LICENSE"
 cp "$REPO_ROOT/PRIVACY.md" "$PACKAGE_ROOT/PRIVACY.md"
@@ -23,7 +25,7 @@ cp "$REPO_ROOT/SUPPORT.md" "$PACKAGE_ROOT/SUPPORT.md"
 cp "$REPO_ROOT/TERMS.md" "$PACKAGE_ROOT/TERMS.md"
 
 mkdir -p "$OUT_DIR"
-ARCHIVE="$OUT_DIR/italian-investor-openai.zip"
+ARCHIVE="$OUT_DIR/italian-investor-openai-submission.zip"
 rm -f "$ARCHIVE"
 
 (
