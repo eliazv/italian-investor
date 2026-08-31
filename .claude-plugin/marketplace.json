@@ -5,15 +5,15 @@
     "url": "https://github.com/eliazv"
   },
   "metadata": {
-    "description": "Skill tax-aware per investitori residenti in Italia: eventi fiscali, base fiscale a lotti, zainetto, portafoglio e fonti normative primarie.",
-    "version": "0.5.0"
+    "description": "Skill tax-aware per investitori residenti in Italia: eventi fiscali, lotti per posizione, zainetto, portafoglio e fonti normative primarie.",
+    "version": "0.5.1"
   },
   "plugins": [
     {
       "name": "italian-investor",
       "source": "./",
-      "description": "Analisi di portafoglio e fiscalita italiana: ETF/OICR, azioni, BTP, obbligazioni e certificates; eventi fiscali, base a lotti, zainetto, ribilanciamento tax-aware e successione.",
-      "version": "0.5.0",
+      "description": "Analisi di portafoglio e fiscalita italiana: ETF/OICR, azioni, BTP, obbligazioni e certificates; eventi fiscali, lotti per posizione, zainetto, ribilanciamento tax-aware e successione.",
+      "version": "0.5.1",
       "author": {
         "name": "Elia Zavatta",
         "url": "https://github.com/eliazv"
@@ -30,6 +30,7 @@
         "minusvalenze",
         "zainetto-fiscale",
         "base-fiscale",
+        "lotti-fiscali",
         "dividendi",
         "isin",
         "tasse",
