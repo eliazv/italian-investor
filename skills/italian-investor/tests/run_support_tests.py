@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Test per zainetto strutturato, resolver ISIN e successione."""
+"""Test per zainetto, resolver ISIN, base fiscale e successione."""
 
 import json
 import os
@@ -8,6 +8,7 @@ import sys
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(BASE, "scripts"))
 
+from cost_basis import base_cmp, base_lifo, normalizza_lotto as normalizza_lotto_costo  # noqa: E402
 from instrument_resolver import risolvi, valida_isin  # noqa: E402
 from successione import costo_fiscale_successione  # noqa: E402
 from zainetto import disponibile, consuma, normalizza_lotto  # noqa: E402
@@ -61,6 +62,35 @@ def test_resolver():
     return errori
 
 
+def test_base_fiscale():
+    errori = []
+    raw = [
+        {"data_acquisto": "2024-01-15", "quantita": 50, "costo_unitario_eur": 80, "costi_acquisto_eur": 5},
+        {"data_acquisto": "2025-03-10", "quantita": 30, "costo_unitario_eur": 95, "costi_acquisto_eur": 3},
+        {"data_acquisto": "2026-06-20", "quantita": 20, "costo_unitario_eur": 110, "costi_acquisto_eur": 2},
+    ]
+    lotti = [normalizza_lotto_costo(x, i) for i, x in enumerate(raw)]
+
+    cmp_res = base_cmp(lotti, 25)
+    assert_eq("CMP unitario", cmp_res["costo_medio_ponderato_unitario_eur"], 90.60, errori)
+    assert_eq("CMP base vendita", cmp_res["base_costo_vendita_eur"], 2265.00, errori)
+    assert_eq("CMP non sceglie la norma", cmp_res["regola_fiscale_verificata"], False, errori)
+
+    lifo_res = base_lifo(lotti, 25)
+    assert_eq("LIFO base vendita", lifo_res["base_costo_vendita_eur"], 2677.50, errori)
+    assert_eq("LIFO primo lotto recente", lifo_res["lotti_utilizzati"][0]["data_acquisto"], "2026-06-20", errori)
+    assert_eq("LIFO secondo lotto", lifo_res["lotti_utilizzati"][1]["quantita_utilizzata"], 5, errori)
+
+    ambigui = [
+        normalizza_lotto_costo({"data_acquisto": "2026-01-10", "quantita": 5, "costo_unitario_eur": 90}, 0),
+        normalizza_lotto_costo({"data_acquisto": "2026-01-10", "quantita": 5, "costo_unitario_eur": 100}, 1),
+    ]
+    stop = base_lifo(ambigui, 3)
+    assert_eq("LIFO stessa data hard stop", stop.get("errore"), "AMBIGUITA_STESSA_DATA", errori)
+    assert_eq("LIFO non inventa base", stop.get("base_costo_vendita_eur"), None, errori)
+    return errori
+
+
 def test_successione():
     with open(os.path.join(BASE, "tests", "casi_successione.json"), encoding="utf-8") as f:
         casi = json.load(f)
@@ -85,7 +115,11 @@ def test_successione():
 
 def main():
     falliti = 0
-    for nome, fn in (("zainetto", test_zainetto), ("resolver", test_resolver)):
+    for nome, fn in (
+        ("zainetto", test_zainetto),
+        ("resolver", test_resolver),
+        ("base_fiscale", test_base_fiscale),
+    ):
         errori = fn()
         if errori:
             falliti += 1
