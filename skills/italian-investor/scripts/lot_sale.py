@@ -24,7 +24,7 @@ import argparse
 import json
 import sys
 
-from cost_basis import carica_lotti, calcola
+from cost_basis import carica_lotti, calcola_e_consuma
 from tax_engine import simula_vendita
 
 TIPI_LOT_AWARE = {"azione", "obbligazione", "titolo_stato", "certificate"}
@@ -46,6 +46,21 @@ def metodo_da_regime(tipo, regime):
     return None, "Regime non supportato: %s" % regime
 
 
+def _serializza_lotti(lotti):
+    if lotti is None:
+        return None
+    return [
+        {
+            "data_acquisto": x["data_acquisto"],
+            "quantita": round(float(x["quantita"]), 8),
+            "costo_unitario_eur": round(float(x["costo_unitario_eur"]), 8),
+            "costi_acquisto_eur": round(float(x.get("costi_acquisto_eur") or 0.0), 8),
+            "costo_totale_eur": round(float(x["costo_totale_eur"]), 8),
+        }
+        for x in lotti
+    ]
+
+
 def simula_vendita_lotti(tipo, regime, lotti, prezzo, quantita,
                          minus_disponibili=0.0, quota_stato=None,
                          costi_vendita=0.0, metodo=None):
@@ -59,6 +74,7 @@ def simula_vendita_lotti(tipo, regime, lotti, prezzo, quantita,
                 "errore": errore,
                 "imposta_stimata": None,
                 "base_fiscale": None,
+                "lotti_residui": None,
             }
     else:
         metodo = str(metodo).strip().lower()
@@ -66,15 +82,21 @@ def simula_vendita_lotti(tipo, regime, lotti, prezzo, quantita,
             return {"errore": "metodo deve essere cmp o lifo", "imposta_stimata": None}
 
     try:
-        base = calcola(lotti, metodo, quantita)
+        base = calcola_e_consuma(lotti, metodo, quantita)
     except ValueError as exc:
-        return {"errore": str(exc), "imposta_stimata": None, "base_fiscale": None}
+        return {
+            "errore": str(exc),
+            "imposta_stimata": None,
+            "base_fiscale": None,
+            "lotti_residui": None,
+        }
 
     if base.get("errore"):
         return {
             "errore": base["errore"],
             "imposta_stimata": None,
             "base_fiscale": base,
+            "lotti_residui": None,
         }
 
     q = float(quantita)
@@ -91,17 +113,23 @@ def simula_vendita_lotti(tipo, regime, lotti, prezzo, quantita,
         costi=float(costi_vendita or 0.0),
     )
 
+    base_pubblica = dict(base)
+    residui = base_pubblica.pop("lotti_residui", None)
+
     return {
         "tipo": tipo,
         "regime": regime,
         "metodo_base": metodo,
-        "base_fiscale": base,
+        "base_fiscale": base_pubblica,
         "pmc_fiscale_derivato": round(pmc_fiscale, 8),
         "vendita": vendita,
         "imposta_stimata": vendita.get("imposta_stimata"),
+        "lotti_residui": residui,
+        "lotti_residui_serializzati": _serializza_lotti(residui),
         "verificare": [
             "Il metodo e' stato scelto in base al regime solo per una fattispecie coperta; verificare sempre che lo strumento e l'evento rientrino davvero nella regola.",
             "I lotti devono essere gia' convertiti correttamente in EUR con cambi fiscalmente rilevanti e costi inerenti documentabili.",
+            "Lo stato residuo CMP e' un pool simulato per proseguire calcoli nello stesso regime; non usarlo per dedurre un ordine LIFO dopo un cambio di regime.",
         ],
     }
 
@@ -128,6 +156,9 @@ def main(argv=None):
             args.tipo, args.regime, lotti, args.prezzo, args.quantita,
             args.minus, args.quota_stato, args.costi_vendita, args.metodo,
         )
+        # I dizionari normalizzati contengono campi tecnici interni: in CLI usa
+        # soltanto la versione serializzata.
+        out.pop("lotti_residui", None)
     except (OSError, ValueError) as exc:
         out = {"errore": str(exc), "imposta_stimata": None}
 
