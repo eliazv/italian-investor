@@ -59,6 +59,32 @@ def test_resolver():
     assert_eq("mismatch bloccato", mismatch["calcolo_fiscale_azionabile"], False, errori)
     unknown = risolvi("IE00BK5BQT80", "etf", reg)
     assert_eq("unknown non azionabile", unknown["calcolo_fiscale_azionabile"], False, errori)
+
+    fresco = risolvi(
+        "US0378331005", "azione", reg,
+        data_riferimento="2026-08-31", max_age_giorni=30,
+    )
+    assert_eq("registry fresco azionabile", fresco["calcolo_fiscale_azionabile"], True, errori)
+    assert_eq("eta registry", fresco["freschezza"]["eta_giorni"], 7, errori)
+    assert_eq("registry non scaduto", fresco["freschezza"]["scaduta"], False, errori)
+
+    stale = risolvi(
+        "US0378331005", "azione", reg,
+        data_riferimento="2026-08-31", max_age_giorni=5,
+    )
+    assert_eq("registry stale bloccato", stale["calcolo_fiscale_azionabile"], False, errori)
+    assert_eq("registry stale flag", stale["freschezza"]["scaduta"], True, errori)
+
+    data_errata = {
+        "US0378331005": {
+            "isin": "US0378331005",
+            "tipo": "azione",
+            "fonte": "fixture",
+            "verificato_il": "31/08/2026",
+        }
+    }
+    bad = risolvi("US0378331005", "azione", data_errata)
+    assert_eq("data registry non ISO bloccata", bad["calcolo_fiscale_azionabile"], False, errori)
     return errori
 
 
