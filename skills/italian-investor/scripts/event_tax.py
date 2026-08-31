@@ -2,11 +2,12 @@
 """Motore deterministico per proventi periodici e altri flussi finanziari.
 
 Separa gli eventi fiscali dalla vendita: una stessa obbligazione, per esempio,
-puo' generare un reddito di capitale con la cedola e un reddito diverso con il
+può generare un reddito di capitale con la cedola e un reddito diverso con il
 capital gain da cessione.
 
-Il modulo copre solo casi semplici e verificabili. Se esistono ritenute estere,
-strumenti ibridi o qualificazioni dipendenti dal prospetto restituisce hard-stop.
+Il modulo copre solo casi semplici e verificabili. Se il flusso è di fonte
+estera, esistono ritenute estere, strumenti ibridi o qualificazioni dipendenti
+dal prospetto restituisce hard-stop.
 
 Esempi:
 
@@ -27,7 +28,6 @@ ALIQUOTA_TITOLI_PUBBLICI = 0.125
 CAPITALE = "reddito_di_capitale"
 DIVERSO = "reddito_diverso"
 
-# Regole relative all'EVENTO, non alla natura complessiva dello strumento.
 EVENTI = {
     ("azione", "dividendo"): {
         "categoria": CAPITALE,
@@ -85,7 +85,10 @@ FONTI = [
     "DPR 600/1973 art. 27: ritenuta del 26% sui dividendi corrisposti a persone fisiche residenti fuori dall'impresa.",
     "DPR 600/1973 art. 26-quinquies / disciplina OICR: proventi da partecipazione a OICR come redditi di capitale; verificare testo vigente e prodotto.",
     "Agenzia delle Entrate, Circolare 19/E del 27/06/2014: componente di OICR riferibile a titoli pubblici agevolati.",
+    "Istruzioni dichiarative correnti: per redditi di capitale di fonte estera e imposte estere verificare quadro, convenzione e modalita' di incasso applicabili.",
 ]
+
+ITALIA_ALIASES = {"IT", "ITA", "ITALIA", "ITALY"}
 
 
 def _quota_valida(quota_stato):
@@ -98,6 +101,11 @@ def _quota_valida(quota_stato):
     if not 0.0 <= q <= 1.0:
         raise ValueError("quota_stato deve essere compresa tra 0 e 1")
     return q
+
+
+def _paese_estero(paese_fonte):
+    raw = str(paese_fonte or "").strip().upper()
+    return bool(raw and raw not in ITALIA_ALIASES)
 
 
 def classifica_evento(tipo, evento):
@@ -162,10 +170,10 @@ def simula_provento(tipo, evento, lordo, quota_stato=None,
             "fonti": info["fonti"],
         }
 
-    # La doppia imposizione internazionale non viene compressa in una formula
-    # generica: paese, convenzione, aliquota convenzionale e modalita' di incasso
-    # possono cambiare il risultato.
-    if ritenuta_estera > 0:
+    # Il solo fatto che il flusso sia estero basta a rendere insufficiente la
+    # formula domestica, anche se l'utente non ha ancora indicato una ritenuta.
+    # Evita il bug 'ritenuta_estera omessa -> tratta come Italia'.
+    if _paese_estero(paese_fonte) or ritenuta_estera > 0:
         return {
             "tipo": tipo,
             "evento": evento,
@@ -174,16 +182,16 @@ def simula_provento(tipo, evento, lordo, quota_stato=None,
             "ritenuta_estera": round(ritenuta_estera, 2),
             "paese_fonte": paese_fonte,
             "imposta_stimata": None,
+            "netto_stimato": None,
             "dato_mancante": "trattamento_doppia_imposizione_estera",
             "verificare": [
-                "Verificare Paese fonte, convenzione, aliquota convenzionale, eventuale credito d'imposta e modalita' di incasso.",
+                "Verificare Paese fonte, convenzione, aliquota/ritenuta estera, eventuale credito d'imposta e modalita' di incasso/intermediario.",
             ],
             "fonti": info["fonti"],
         }
 
     schema = info["schema_aliquota"]
     verificare = []
-    scenario = None
 
     if schema == "ordinaria":
         imposta = lordo * ALIQUOTA_ORDINARIA
@@ -198,10 +206,6 @@ def simula_provento(tipo, evento, lordo, quota_stato=None,
         if quota_stato is None:
             imposta_max = lordo * ALIQUOTA_ORDINARIA
             imposta_min = lordo * ALIQUOTA_ORDINARIA * FRAZIONE_IMPONIBILE_AGEVOLATA
-            scenario = {
-                "quota_agevolata_0": round(imposta_max, 2),
-                "quota_agevolata_100": round(imposta_min, 2),
-            }
             return {
                 "tipo": tipo,
                 "evento": evento,
@@ -209,7 +213,10 @@ def simula_provento(tipo, evento, lordo, quota_stato=None,
                 "lordo": round(lordo, 2),
                 "quota_stato": None,
                 "imposta_stimata": None,
-                "imposta_scenario": scenario,
+                "imposta_scenario": {
+                    "quota_agevolata_0": round(imposta_max, 2),
+                    "quota_agevolata_100": round(imposta_min, 2),
+                },
                 "netto_stimato": None,
                 "dato_mancante": "quota_stato",
                 "compensabile_con_minus": False,
