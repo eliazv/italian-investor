@@ -4,10 +4,15 @@
 Questo modulo NON decide quale metodo fiscale sia applicabile. Il chiamante deve
 prima verificare regime, strumento ed evento su fonti primarie.
 
+Oltre a calcolare la base di una vendita puo' produrre lo stato residuo dei
+lotti, utile per simulare in sequenza piu' operazioni senza riusare quantita'
+gia' cedute.
+
 Esempi:
 
     python scripts/cost_basis.py calcola lotti.csv --metodo cmp --quantita 40
     python scripts/cost_basis.py calcola lotti.csv --metodo lifo --quantita 40
+    python scripts/cost_basis.py consuma lotti.csv --metodo lifo --quantita 40
 
 CSV minimo:
 
@@ -24,6 +29,8 @@ import json
 import sys
 from collections import defaultdict
 from datetime import date
+
+EPS = 1e-12
 
 
 def r(x):
@@ -56,6 +63,22 @@ def normalizza_lotto(row, indice=0):
     }
 
 
+def _ricostruisci_lotto(lotto, quantita, costi=None):
+    """Ricrea un lotto normalizzato preservando prezzo e data originali."""
+    q = float(quantita)
+    if q <= EPS:
+        return None
+    if costi is None:
+        rapporto = q / float(lotto["quantita"])
+        costi = float(lotto.get("costi_acquisto_eur") or 0.0) * rapporto
+    return normalizza_lotto({
+        "data_acquisto": lotto["data_acquisto"],
+        "quantita": q,
+        "costo_unitario_eur": lotto["costo_unitario_eur"],
+        "costi_acquisto_eur": float(costi),
+    }, lotto.get("indice", 0))
+
+
 def carica_lotti(path):
     with open(path, newline="", encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
@@ -67,7 +90,7 @@ def _valida_quantita(lotti, quantita_venduta):
     if q <= 0:
         raise ValueError("quantita venduta deve essere > 0")
     disponibile = sum(x["quantita"] for x in lotti)
-    if q > disponibile + 1e-12:
+    if q > disponibile + EPS:
         raise ValueError(
             "quantita venduta %.8g superiore alla quantita disponibile %.8g"
             % (q, disponibile)
@@ -113,10 +136,10 @@ def base_lifo(lotti, quantita_venduta):
         q_gruppo = sum(x["quantita"] for x in gruppo)
         costo_gruppo = sum(x["costo_totale_eur"] for x in gruppo)
 
-        if residuo <= 1e-12:
+        if residuo <= EPS:
             break
 
-        if residuo >= q_gruppo - 1e-12:
+        if residuo >= q_gruppo - EPS:
             usata = min(residuo, q_gruppo)
             base += costo_gruppo
             utilizzi.append({
@@ -171,6 +194,89 @@ def base_lifo(lotti, quantita_venduta):
     }
 
 
+def consuma_cmp(lotti, quantita_venduta):
+    """Riduce pro-quota tutti i lotti mantenendo invariato il CMP del residuo.
+
+    Nel regime a costo medio non esiste un lotto specifico da scegliere per la
+    vendita. Per mantenere uno stato numericamente coerente nelle simulazioni,
+    il pool residuo conserva le proporzioni dei lotti originari. Non usare questo
+    stato sintetico per inferire un successivo ordine LIFO dopo un cambio regime.
+    """
+    base = base_cmp(lotti, quantita_venduta)
+    disponibile = float(base["quantita_disponibile"])
+    residua = float(base["quantita_residua"])
+    if residua <= EPS:
+        return {**base, "lotti_residui": [], "stato_residuo": "vuoto"}
+
+    fattore = residua / disponibile
+    residui = []
+    for lotto in lotti:
+        nuovo = _ricostruisci_lotto(
+            lotto,
+            float(lotto["quantita"]) * fattore,
+            float(lotto.get("costi_acquisto_eur") or 0.0) * fattore,
+        )
+        if nuovo:
+            residui.append(nuovo)
+    return {
+        **base,
+        "lotti_residui": residui,
+        "stato_residuo": "pool_cmp_proporzionale",
+    }
+
+
+def consuma_lifo(lotti, quantita_venduta):
+    """Restituisce i lotti residui dopo consumo LIFO senza inventare ordini intraday."""
+    base = base_lifo(lotti, quantita_venduta)
+    if base.get("errore"):
+        return {**base, "lotti_residui": None}
+
+    da_consumare = float(quantita_venduta)
+    per_data = defaultdict(list)
+    for lotto in lotti:
+        per_data[lotto["data_acquisto"]].append(lotto)
+
+    residui = []
+    consumati = set()
+    parziale = None
+
+    for giorno in sorted(per_data.keys(), reverse=True):
+        gruppo = per_data[giorno]
+        q_gruppo = sum(float(x["quantita"]) for x in gruppo)
+        if da_consumare <= EPS:
+            break
+        if da_consumare >= q_gruppo - EPS:
+            for lotto in gruppo:
+                consumati.add(id(lotto))
+            da_consumare -= q_gruppo
+            continue
+        # base_lifo ha gia' bloccato il caso con piu' lotti nella stessa data.
+        lotto = gruppo[0]
+        nuova_q = float(lotto["quantita"]) - da_consumare
+        parziale = (lotto, nuova_q)
+        consumati.add(id(lotto))
+        da_consumare = 0.0
+        break
+
+    for lotto in lotti:
+        if parziale and lotto is parziale[0]:
+            nuovo = _ricostruisci_lotto(lotto, parziale[1])
+            if nuovo:
+                residui.append(nuovo)
+        elif id(lotto) not in consumati:
+            residui.append(_ricostruisci_lotto(
+                lotto,
+                lotto["quantita"],
+                lotto.get("costi_acquisto_eur", 0.0),
+            ))
+
+    return {
+        **base,
+        "lotti_residui": residui,
+        "stato_residuo": "lotti_lifo_effettivi",
+    }
+
+
 def calcola(lotti, metodo, quantita_venduta):
     metodo = str(metodo).strip().lower()
     if not lotti:
@@ -182,6 +288,32 @@ def calcola(lotti, metodo, quantita_venduta):
     raise ValueError("metodo non supportato: %s (usa cmp o lifo)" % metodo)
 
 
+def calcola_e_consuma(lotti, metodo, quantita_venduta):
+    metodo = str(metodo).strip().lower()
+    if not lotti:
+        raise ValueError("nessun lotto disponibile")
+    if metodo == "cmp":
+        return consuma_cmp(lotti, quantita_venduta)
+    if metodo == "lifo":
+        return consuma_lifo(lotti, quantita_venduta)
+    raise ValueError("metodo non supportato: %s (usa cmp o lifo)" % metodo)
+
+
+def _serializza_lotti(lotti):
+    if lotti is None:
+        return None
+    return [
+        {
+            "data_acquisto": x["data_acquisto"],
+            "quantita": r(x["quantita"]),
+            "costo_unitario_eur": r(x["costo_unitario_eur"]),
+            "costi_acquisto_eur": r(x.get("costi_acquisto_eur", 0.0)),
+            "costo_totale_eur": r(x["costo_totale_eur"]),
+        }
+        for x in lotti
+    ]
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="comando", required=True)
@@ -190,10 +322,19 @@ def main(argv=None):
     p.add_argument("--metodo", choices=("cmp", "lifo"), required=True)
     p.add_argument("--quantita", type=float, required=True, help="quantita da vendere")
 
+    c = sub.add_parser("consuma", help="calcola la base e restituisce i lotti residui")
+    c.add_argument("csv", help="CSV dei lotti con costi gia' espressi in EUR")
+    c.add_argument("--metodo", choices=("cmp", "lifo"), required=True)
+    c.add_argument("--quantita", type=float, required=True, help="quantita da vendere")
+
     args = parser.parse_args(argv)
     try:
         lotti = carica_lotti(args.csv)
-        out = calcola(lotti, args.metodo, args.quantita)
+        if args.comando == "calcola":
+            out = calcola(lotti, args.metodo, args.quantita)
+        else:
+            out = calcola_e_consuma(lotti, args.metodo, args.quantita)
+            out["lotti_residui"] = _serializza_lotti(out.get("lotti_residui"))
     except (OSError, ValueError) as exc:
         out = {"errore": str(exc), "base_costo_vendita_eur": None}
         print(json.dumps(out, ensure_ascii=False, indent=2))
