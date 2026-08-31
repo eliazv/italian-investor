@@ -12,6 +12,7 @@ from cost_basis import carica_lotti  # noqa: E402
 from event_tax import simula_provento  # noqa: E402
 from lot_sale import TIPI_LOT_AWARE, simula_vendita_lotti  # noqa: E402
 from portfolio import analizza, leggi, ribilancia  # noqa: E402
+from portfolio_basis import riconcilia_portafoglio  # noqa: E402
 from portfolio_lots import (  # noqa: E402
     carica_lotti_portafoglio,
     indicizza,
@@ -109,6 +110,35 @@ def test_lotti():
     return errori
 
 
+def test_riconciliazione_base():
+    errori = []
+    posizioni, _ = leggi(os.path.join(BASE, "examples", "portafoglio-esempio.csv"))
+    indice = indicizza(carica_lotti_portafoglio(
+        os.path.join(BASE, "examples", "lotti-portafoglio-esempio.csv")
+    ))
+    out = riconcilia_portafoglio(posizioni, indice)
+    riepilogo = out.get("riepilogo", {})
+    if not near(riepilogo.get("differenza_eur"), 34):
+        errori.append("differenza costo lotti-PMC attesa 34 EUR, ottenuta %r" % riepilogo.get("differenza_eur"))
+    if riepilogo.get("tutto_coerente"):
+        errori.append("fixture deve segnalare differenze fra PMC e lotti")
+    if len(riepilogo.get("posizioni_con_differenza", [])) != 3:
+        errori.append("attese tre posizioni lot-aware con differenza")
+    apple = [
+        x for x in out.get("posizioni", [])
+        if x.get("isin") == "US0378331005"
+    ]
+    if not apple or not near(apple[0].get("differenza_costo_eur"), 4):
+        errori.append("Apple: differenza costo attesa 4 EUR")
+    etf = [
+        x for x in out.get("posizioni", [])
+        if x.get("tipo") == "etf"
+    ]
+    if not etf or any(x.get("coperta") for x in etf):
+        errori.append("ETF devono restare fuori dalla riconciliazione lot engine")
+    return errori
+
+
 def test_registry_lotti_e_ribilanciamento():
     errori = []
     portfolio_path = None
@@ -155,7 +185,6 @@ def test_registry_lotti_e_ribilanciamento():
         if not apple or not (0 < apple[0]["quantita"] < 40):
             errori.append("la strategia deve riportare la quantita Apple residua")
 
-        # Un mismatch quantitativo deve bloccare la copertura.
         idx_bad = dict(idx)
         key = ("US0378331005", "BrokerA")
         idx_bad[key] = idx_bad[key][:-1]
@@ -225,6 +254,7 @@ def main():
     gruppi = (
         ("eventi", test_eventi),
         ("lotti", test_lotti),
+        ("riconciliazione_base", test_riconciliazione_base),
         ("registry_lotti_ribilanciamento", test_registry_lotti_e_ribilanciamento),
         ("validator_concentrazione", test_validator_e_concentrazione),
     )
