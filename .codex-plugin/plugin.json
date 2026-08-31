@@ -1,6 +1,6 @@
 {
   "name": "italian-investor",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "Tax-aware portfolio analysis for Italian tax residents with deterministic calculations and primary-source verification.",
   "author": {
     "name": "Elia Zavatta",
@@ -17,6 +17,8 @@
     "etf",
     "btp",
     "capital-losses",
+    "cost-basis",
+    "dividends",
     "rebalancing"
   ],
   "skills": "./skills/",
@@ -25,7 +27,7 @@
     "composerIcon": "./assets/logo.png",
     "displayName": "Italian Investor",
     "shortDescription": "Tax-aware portfolio analysis for Italian investors",
-    "longDescription": "Analyze portfolio allocation, simulated sales, tax-loss carryforwards, rebalancing and covered Italian tax scenarios using deterministic Python calculations and verified primary sources. Analysis and simulation only; not financial or tax advice.",
+    "longDescription": "Analyze portfolio allocation, data quality, tax events, lot-aware sales, tax-loss carryforwards and rebalancing for Italian tax residents using deterministic Python calculations and verified primary sources. Analysis and simulation only; not financial or tax advice.",
     "developerName": "Elia Zavatta",
     "websiteURL": "https://github.com/eliazv/italian-investor",
     "privacyPolicyURL": "https://github.com/eliazv/italian-investor/blob/main/PRIVACY.md",
