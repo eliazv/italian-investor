@@ -24,6 +24,7 @@ jobs:
           cd skills/italian-investor
           python scripts/portfolio_validator.py valida examples/portafoglio-esempio.csv > /dev/null
           python scripts/portfolio_lots.py examples/lotti-portafoglio-esempio.csv > /dev/null
+          python scripts/portfolio_basis.py examples/portafoglio-esempio.csv examples/lotti-portafoglio-esempio.csv > /dev/null
           python scripts/portfolio.py analizza examples/portafoglio-esempio.csv > /dev/null
           python scripts/portfolio.py analizza examples/portafoglio-esempio.csv \
             --zainetto-csv examples/zainetto-esempio.csv --anno-fiscale 2026 > /dev/null
