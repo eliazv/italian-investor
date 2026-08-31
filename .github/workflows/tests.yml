@@ -15,7 +15,7 @@ jobs:
           python-version: "3.11"
       - name: Casi fiscali di regressione
         run: python skills/italian-investor/tests/run_tests.py
-      - name: Zainetto, resolver e successione
+      - name: Zainetto, resolver, base fiscale e successione
         run: python skills/italian-investor/tests/run_support_tests.py
       - name: Smoke test degli script
         run: |
@@ -28,6 +28,8 @@ jobs:
             --zainetto-csv examples/zainetto-esempio.csv --anno-fiscale 2026 > /dev/null
           python scripts/zainetto.py stato examples/zainetto-esempio.csv --anno-fiscale 2026 > /dev/null
           python scripts/instrument_resolver.py resolve --isin US0378331005 --tipo azione > /dev/null
+          python scripts/cost_basis.py calcola examples/lotti-esempio.csv --metodo cmp --quantita 25 > /dev/null
+          python scripts/cost_basis.py calcola examples/lotti-esempio.csv --metodo lifo --quantita 25 > /dev/null
           python scripts/successione.py costo --tipo azione --valore-dichiarato 10000 > /dev/null
           python scripts/tax_engine.py classifica --tipo etf > /dev/null
       - name: Coerenza delle version nei manifest
