@@ -28,6 +28,10 @@ def test_eventi():
     if az.get("categoria_reddito") != "reddito_di_capitale":
         errori.append("dividendo azione: categoria errata")
 
+    italia = simula_provento("azione", "dividendo", 100, paese_fonte="IT")
+    if not near(italia.get("imposta_stimata"), 26):
+        errori.append("paese_fonte=IT non deve attivare il ramo estero")
+
     btp = simula_provento("titolo_stato", "cedola", 100)
     if not near(btp.get("imposta_stimata"), 12.5):
         errori.append("cedola titolo Stato: imposta attesa 12.5")
@@ -44,6 +48,11 @@ def test_eventi():
     foreign = simula_provento("azione", "dividendo", 100, ritenuta_estera=15, paese_fonte="US")
     if foreign.get("imposta_stimata") is not None or foreign.get("dato_mancante") != "trattamento_doppia_imposizione_estera":
         errori.append("dividendo con ritenuta estera deve fare hard-stop")
+
+    foreign_no_withholding = simula_provento("azione", "dividendo", 100, paese_fonte="US")
+    if (foreign_no_withholding.get("imposta_stimata") is not None or
+            foreign_no_withholding.get("dato_mancante") != "trattamento_doppia_imposizione_estera"):
+        errori.append("fonte estera deve fare hard-stop anche se la ritenuta non e' stata indicata")
 
     cert = simula_provento("certificate", "cedola", 100)
     if "errore" not in cert:
@@ -104,7 +113,6 @@ def test_validator_e_concentrazione():
         if path and os.path.exists(path):
             os.unlink(path)
 
-    # Stesso ISIN su due broker: fiscalmente separato, economicamente una sola esposizione.
     contenuto_multi = (
         "isin,nome,tipo,quantita,pmc,prezzo,asset_class,valuta_esposizione,broker,quota_stato\n"
         "US0378331005,Apple A,azione,5,100,100,azionario,USD,BrokerA,0\n"
@@ -121,7 +129,6 @@ def test_validator_e_concentrazione():
             errori.append("stesso ISIN su broker diversi non deve essere bloccante")
         posizioni, lacune = leggi(path)
         out = analizza(posizioni, lacune)
-        # Apple vale 1000 su totale 1500, Microsoft 500: HHI = (2/3)^2 + (1/3)^2 = 5/9.
         if not near(out.get("concentrazione", {}).get("hhi"), 0.5556, 0.0001):
             errori.append("HHI deve aggregare Apple per ISIN: ottenuto %r" % out.get("concentrazione", {}).get("hhi"))
         if out.get("strumenti_unici") != 2:
