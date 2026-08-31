@@ -23,16 +23,23 @@ jobs:
         run: |
           cd skills/italian-investor
           python scripts/portfolio_validator.py valida examples/portafoglio-esempio.csv > /dev/null
+          python scripts/portfolio_lots.py examples/lotti-portafoglio-esempio.csv > /dev/null
           python scripts/portfolio.py analizza examples/portafoglio-esempio.csv > /dev/null
           python scripts/portfolio.py analizza examples/portafoglio-esempio.csv \
             --zainetto-csv examples/zainetto-esempio.csv --anno-fiscale 2026 > /dev/null
           python scripts/portfolio.py ribilancia examples/portafoglio-esempio.csv \
             --target azionario=45,obbligazionario=50,liquidita=5 \
             --zainetto-csv examples/zainetto-esempio.csv --anno-fiscale 2026 > /dev/null
+          python scripts/portfolio.py ribilancia examples/portafoglio-esempio.csv \
+            --target azionario=45,obbligazionario=50,liquidita=5 \
+            --zainetto-csv examples/zainetto-esempio.csv --anno-fiscale 2026 \
+            --regime dichiarativo \
+            --lotti-posizioni-csv examples/lotti-portafoglio-esempio.csv > /dev/null
           python scripts/zainetto.py stato examples/zainetto-esempio.csv --anno-fiscale 2026 > /dev/null
           python scripts/instrument_resolver.py resolve --isin US0378331005 --tipo azione > /dev/null
           python scripts/cost_basis.py calcola examples/lotti-esempio.csv --metodo cmp --quantita 25 > /dev/null
           python scripts/cost_basis.py calcola examples/lotti-esempio.csv --metodo lifo --quantita 25 > /dev/null
+          python scripts/cost_basis.py consuma examples/lotti-esempio.csv --metodo lifo --quantita 25 > /dev/null
           python scripts/lot_sale.py vendita --tipo azione --regime dichiarativo \
             --lotti examples/lotti-esempio.csv --prezzo 140 --quantita 15 > /dev/null
           python scripts/event_tax.py provento --tipo azione --evento dividendo --lordo 100 > /dev/null
