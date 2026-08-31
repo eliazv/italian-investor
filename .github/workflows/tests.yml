@@ -17,9 +17,12 @@ jobs:
         run: python skills/italian-investor/tests/run_tests.py
       - name: Zainetto, resolver, base fiscale e successione
         run: python skills/italian-investor/tests/run_support_tests.py
+      - name: Eventi fiscali, vendite a lotti e qualita dati
+        run: python skills/italian-investor/tests/run_extended_tests.py
       - name: Smoke test degli script
         run: |
           cd skills/italian-investor
+          python scripts/portfolio_validator.py valida examples/portafoglio-esempio.csv > /dev/null
           python scripts/portfolio.py analizza examples/portafoglio-esempio.csv > /dev/null
           python scripts/portfolio.py analizza examples/portafoglio-esempio.csv \
             --zainetto-csv examples/zainetto-esempio.csv --anno-fiscale 2026 > /dev/null
@@ -30,6 +33,11 @@ jobs:
           python scripts/instrument_resolver.py resolve --isin US0378331005 --tipo azione > /dev/null
           python scripts/cost_basis.py calcola examples/lotti-esempio.csv --metodo cmp --quantita 25 > /dev/null
           python scripts/cost_basis.py calcola examples/lotti-esempio.csv --metodo lifo --quantita 25 > /dev/null
+          python scripts/lot_sale.py vendita --tipo azione --regime dichiarativo \
+            --lotti examples/lotti-esempio.csv --prezzo 140 --quantita 15 > /dev/null
+          python scripts/event_tax.py provento --tipo azione --evento dividendo --lordo 100 > /dev/null
+          python scripts/event_tax.py provento --tipo etf --evento distribuzione \
+            --lordo 100 --quota-stato 0.30 > /dev/null
           python scripts/successione.py costo --tipo azione --valore-dichiarato 10000 > /dev/null
           python scripts/tax_engine.py classifica --tipo etf > /dev/null
       - name: Coerenza delle version nei manifest
