@@ -38,6 +38,23 @@ def test_zainetto():
     assert_eq("consumo totale", res["utilizzato"], 700, errori)
     assert_eq("primo lotto consumato", res["utilizzi"][0]["anno_realizzo"], 2022, errori)
     assert_eq("secondo lotto usato", res["utilizzi"][1]["utilizzato"], 200, errori)
+
+    dichiarativo = [
+        normalizza_lotto({"broker": "EsteroA", "regime": "dichiarativo", "anno_realizzo": 2022, "importo": 300}),
+        normalizza_lotto({"broker": "EsteroB", "regime": "dichiarativo", "anno_realizzo": 2023, "importo": 500}),
+    ]
+    assert_eq(
+        "Dichiarativo disponibile multi-broker",
+        disponibile(dichiarativo, "broker-irrilevante", 2026, "dichiarativo"),
+        800,
+        errori,
+    )
+    agg = consuma(dichiarativo, 600, "broker-irrilevante", 2026, "dichiarativo")
+    assert_eq("Dichiarativo consumo multi-broker", agg["utilizzato"], 600, errori)
+    assert_eq("Dichiarativo usa prima 2022", agg["utilizzi"][0]["broker"], "EsteroA", errori)
+    assert_eq("Dichiarativo consuma tutto 2022", agg["utilizzi"][0]["utilizzato"], 300, errori)
+    assert_eq("Dichiarativo prosegue su altro broker", agg["utilizzi"][1]["broker"], "EsteroB", errori)
+    assert_eq("Dichiarativo secondo broker usato", agg["utilizzi"][1]["utilizzato"], 300, errori)
     return errori
 
 
