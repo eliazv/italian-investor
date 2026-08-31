@@ -1,4 +1,4 @@
-# Italian Investor — Agent Skill per l'analisi di portafoglio e la fiscalità italiana
+# Italian Investor — Agent Skill per portafogli e fiscalità italiana
 
 [![test](https://github.com/eliazv/italian-investor/actions/workflows/tests.yml/badge.svg)](https://github.com/eliazv/italian-investor/actions/workflows/tests.yml)
 
@@ -6,137 +6,166 @@
 di un residente fiscale italiano con una regola semplice: **la fiscalità non si
 prende dalla memoria del modello**.
 
-Il progetto combina procedura di verifica su fonti primarie, calcoli Python
-deterministici e hard-stop quando mancano dati o classificazioni affidabili.
-Copre ETF/OICR, azioni, BTP e altri titoli pubblici agevolati, obbligazioni,
-certificates, minusvalenze/zainetto fiscale, ribilanciamento tax-aware e alcuni
-casi di successione. ETC/ETN e strumenti con trattamento non generalizzabile
-vengono bloccati finché non viene verificato il prospetto specifico.
+Il progetto combina verifica su fonti primarie, validazione dei dati, calcoli
+Python deterministici e hard-stop quando mancano informazioni sufficienti.
+Distingue inoltre **strumento ed evento fiscale**: una obbligazione, per esempio,
+può produrre un reddito diverso quando viene venduta e un reddito di capitale
+quando paga una cedola.
 
 > Analisi e simulazione, **non** consulenza finanziaria né fiscale e non un software per compilare automaticamente la dichiarazione dei redditi.
 
-## Compatibilità e distribuzione
+## Cosa copre
 
-La sorgente canonica e provider-neutral è `skills/italian-investor/`.
+- ETF/OICR, azioni, BTP e altri titoli pubblici agevolati, obbligazioni e
+  certificates nei casi esplicitamente coperti;
+- vendita, rimborso, dividendo, cedola/interesse e distribuzione OICR come eventi
+  distinti;
+- minusvalenze e zainetto per broker, regime, anno e scadenza;
+- base fiscale da lotti con CMP/LIFO nei casi verificati;
+- ribilanciamento tax-aware e costo fiscale immediato;
+- quota OICR riferibile a titoli pubblici;
+- valuta estera, broker/redditi esteri, Tobin tax e tax drag come controlli da
+  verificare prima di rendere una conclusione azionabile;
+- alcuni casi di successione;
+- validazione strutturale del portfolio e verifica ISIN/tipo tramite registry.
 
-- **Claude Code**: plugin installabile tramite il marketplace GitHub incluso in `.claude-plugin/`.
-- **ChatGPT + Codex**: plugin OpenAI skills-only, con manifest nativo in `.codex-plugin/plugin.json` e marketplace repo in `.agents/plugins/marketplace.json` per test/distribuzione locale.
-- **OpenAI Skills API**: la stessa directory Agent Skill può essere caricata e versionata in un progetto API senza duplicare le istruzioni.
+ETC/ETN, OICR non armonizzati, cripto, PIR, previdenza e strumenti con
+trattamento non generalizzabile vengono bloccati quando manca una regola
+verificata applicabile.
 
-La pubblicazione nella Plugin Directory e il caricamento tramite Skills API sono due flussi separati: la Skills API non rende automaticamente pubblica la skill nella directory.
+## Errori che la skill evita
 
-Per procedura di submission, test reviewer e upload API vedi **[OPENAI.md](OPENAI.md)**.
+Tra gli errori esplicitamente intercettati:
 
-## Cosa evita
-
-Errori tipici che un LLM generalista può commettere:
-
-- compensare le minusvalenze con un guadagno da ETF;
+- compensare una minus con un guadagno ETF classificato come reddito di capitale;
 - trattare un ETF governativo come automaticamente tassato tutto al 12,5%;
 - applicare il 48,08% nel punto sbagliato rispetto alla compensazione;
-- ignorare la riduzione della perdita OICR riferibile a titoli pubblici;
+- usare un `pmc` qualsiasi come se fosse sempre la base fiscale corretta;
+- usare CMP e LIFO senza distinguere regime, strumento ed evento;
+- classificare la cedola di una obbligazione come il capital gain della vendita;
+- calcolare un dividendo estero ignorando ritenuta alla fonte e convenzione;
 - usare le minus di un broker come se fossero disponibili su un altro;
-- ignorare l'anno di scadenza dello zainetto;
-- fidarsi del campo `tipo=etf` senza verificare l'ISIN/KID/prospetto;
-- estendere per analogia la fiscalità di ETF a ETC/ETN;
-- comprimere successione, costo fiscale dell'erede e futura plusvalenza in una singola regola.
-
-## Installazione
-
-### Claude Code
-
-```bash
-/plugin marketplace add eliazv/italian-investor
-/plugin install italian-investor@italian-investor
-```
-
-Oppure:
-
-```bash
-git clone https://github.com/eliazv/italian-investor.git
-cp -r italian-investor/skills/italian-investor ~/.claude/skills/
-```
-
-### ChatGPT / Codex
-
-Il repository contiene il manifest OpenAI `.codex-plugin/plugin.json` e un repo marketplace `.agents/plugins/marketplace.json`. Per sviluppo/test apri il repository come progetto, riavvia ChatGPT desktop dopo modifiche al marketplace/plugin e verifica **Italian Investor** tra i plugin disponibili sulle superfici in cui i repo marketplace sono abilitati.
-
-Per pubblicarlo nella directory universale ChatGPT + Codex usa il **Plugin Submission Portal**, scegliendo **Skills only**. La checklist completa e i materiali reviewer sono in [OPENAI.md](OPENAI.md) e [openai/submission-tests.md](openai/submission-tests.md).
-
-### OpenAI Skills API
-
-Con una API key OpenAI configurata:
-
-```bash
-export OPENAI_API_KEY="..."
-bash ./tools/openai/upload-skill.sh
-```
-
-Per creare una nuova versione di una skill API esistente e impostarla come default:
-
-```bash
-bash ./tools/openai/upload-skill.sh skill_XXXXXXXX
-```
-
-Il core della skill richiede solo Python 3; l'helper opzionale per la Skills API richiede `curl` e `zip`.
+- spostare virtualmente lo zainetto senza certificazione/regola verificata;
+- sottostimare la concentrazione perché lo stesso ISIN è detenuto su più broker;
+- fidarsi di `tipo=etf` senza verifica ISIN/KID/prospetto;
+- estendere per analogia la fiscalità ETF a ETC/ETN;
+- confondere valuta di esposizione e valuta fiscalmente rilevante;
+- comprimere successione, costo fiscale dell'erede e futura tassazione in una
+  sola regola.
 
 ## Flusso consigliato
 
 ```text
-Google Sheet / CSV portfolio
-          |
-          v
-verifica ISIN / natura giuridica
-          |
-          v
-portfolio + zainetto per broker/anno
-          |
-          v
-motore fiscale deterministico
-          |
-          v
-ribilanciamento / scenari
-          |
-          v
-modello: interpretazione + claim audit + fonti
+CSV / dati portfolio
+        |
+        v
+validazione strutturale
+        |
+        v
+ISIN -> natura giuridica
+        |
+        v
+evento fiscale
+        |
+        v
+regime + broker + base fiscale/lotti + zainetto
+        |
+        v
+fonte primaria vigente
+        |
+        v
+motore deterministico
+        |
+        v
+interpretazione + claim audit
 ```
 
-La skill **non è un provider di market data**: prezzi, holdings, duration,
-rating, TER e dati di prodotto vanno recuperati da fonti esterne attendibili
-(KID/prospetto, emittente, broker o data provider) e poi passati al motore.
+La skill **non è un provider di market data**. Prezzi, holdings, duration,
+rating, TER, quota titoli pubblici e caratteristiche del prodotto devono
+provenire da fonti attendibili e poi essere passati al motore.
 
 ## Uso rapido
 
 ```bash
+# 1. Qualità dati
+python skills/italian-investor/scripts/portfolio_validator.py valida portafoglio.csv
+
+# 2. Analisi portfolio
 python skills/italian-investor/scripts/portfolio.py analizza portafoglio.csv
 
+# 3. Verifica ISIN/tipo
+python skills/italian-investor/scripts/instrument_resolver.py resolve \
+  --isin US0378331005 --tipo azione --registry strumenti.csv
+
+# 4. Vendita semplice
+python skills/italian-investor/scripts/tax_engine.py vendita \
+  --tipo etf --pmc 90 --prezzo 120 --quantita 100 --quota-stato 0.35
+
+# 5. Base fiscale da lotti
+python skills/italian-investor/scripts/cost_basis.py calcola lotti.csv \
+  --metodo lifo --quantita 15
+
+# 6. Vendita lot-aware nei casi coperti
+python skills/italian-investor/scripts/lot_sale.py vendita \
+  --tipo azione --regime dichiarativo --lotti lotti.csv \
+  --prezzo 140 --quantita 15
+
+# 7. Dividendo / cedola / distribuzione
+python skills/italian-investor/scripts/event_tax.py provento \
+  --tipo azione --evento dividendo --lordo 100
+python skills/italian-investor/scripts/event_tax.py provento \
+  --tipo etf --evento distribuzione --lordo 100 --quota-stato 0.30
+
+# 8. Zainetto
 python skills/italian-investor/scripts/zainetto.py stato zainetto.csv \
   --anno-fiscale 2026
 
+# 9. Ribilanciamento
 python skills/italian-investor/scripts/portfolio.py ribilancia portafoglio.csv \
   --target azionario=70,obbligazionario=25,liquidita=5 \
   --zainetto-csv zainetto.csv --anno-fiscale 2026 \
   --regime amministrato
 
-python skills/italian-investor/scripts/instrument_resolver.py resolve \
-  --isin US0378331005 --tipo azione --registry strumenti.csv
-
-python skills/italian-investor/scripts/portfolio.py analizza portafoglio.csv \
-  --registry strumenti.csv --strict-instruments
-
-python skills/italian-investor/scripts/tax_engine.py vendita \
-  --tipo etf --pmc 90 --prezzo 120 --quantita 100 --quota-stato 0.35
-
+# 10. Successione nei casi coperti
 python skills/italian-investor/scripts/successione.py costo \
   --tipo titolo_stato --esente-successione --valore-normale 10250
-
-python skills/italian-investor/tests/run_tests.py
-python skills/italian-investor/tests/run_support_tests.py
 ```
 
-## Zainetto fiscale per broker e scadenza
+## Evento fiscale prima della categoria
 
-Il vecchio `--minus 2000` resta come modalità legacy, ma il formato consigliato è un CSV a lotti:
+Una classificazione fiscale è riferita a un **evento**, non semplicemente al
+nome dello strumento.
+
+```text
+azione + vendita          -> reddito diverso nei casi coperti
+azione + dividendo        -> reddito di capitale
+obbligazione + vendita    -> reddito diverso nei casi coperti
+obbligazione + cedola     -> reddito di capitale
+titolo pubblico + vendita -> reddito diverso con disciplina agevolata
+titolo pubblico + cedola  -> reddito di capitale agevolato
+ETF/OICR + distribuzione  -> reddito di capitale
+```
+
+Vedi `references/eventi-fiscali.md` e `scripts/event_tax.py`.
+
+## Base fiscale e lotti
+
+Il campo `pmc` del portfolio è un input dichiarato, **non una prova della base
+fiscale**.
+
+Nei casi coperti:
+
+- amministrato: `cost_basis.py` può applicare il costo medio ponderato;
+- dichiarativo: può applicare LIFO quando la fattispecie verificata lo richiede;
+- `lot_sale.py` collega la base derivata dai lotti alla simulazione fiscale;
+- ETF/OICR non vengono assimilati automaticamente alle regole lot-aware delle
+  altre categorie.
+
+Il file esempio è `skills/italian-investor/examples/lotti-esempio.csv`.
+
+## Zainetto per broker e scadenza
+
+Formato consigliato:
 
 ```text
 broker,regime,anno_realizzo,importo
@@ -145,64 +174,31 @@ Directa,amministrato,2024,1200
 IBKR,dichiarativo,2023,800
 ```
 
-La scadenza è calcolata come quarto periodo d'imposta successivo all'anno di realizzo. In **amministrato** il simulatore rende disponibili solo le minus non scadute dello stesso broker della vendita. In **dichiarativo** può aggregare i lotti marcati dichiarativo.
+Il simulatore distingue broker/regime e scadenza. Quando simula più utilizzi
+consuma prima i lotti con scadenza più vicina: è una **strategia del motore**,
+non una regola contabile attribuita all'intermediario.
 
-Quando simula più vendite, consuma prima i lotti con la scadenza più vicina. Questa è una scelta di ottimizzazione del simulatore, non una pretesa sull'ordine contabile applicato dal singolo intermediario.
+## Validazione e concentrazione
 
-Esempio: `skills/italian-investor/examples/zainetto-esempio.csv`.
+`portfolio_validator.py` blocca dati che renderebbero l'analisi inaffidabile,
+come quantità non positive, ISIN invalidi, tipi incoerenti e duplicati dello
+stesso `ISIN + broker`.
 
-## Instrument resolver
-
-`instrument_resolver.py` non tenta di indovinare il prodotto dal prefisso ISIN. Valida formalmente l'ISIN tramite check digit e confronta il `tipo` dichiarato nel portfolio con un registry verificato su KID/prospetto:
-
-```text
-isin,tipo,fonte,verificato_il
-US0378331005,azione,prospetto/emittente,2026-08-24
-```
-
-Se l'ISIN manca dal registry, il tipo è incoerente oppure mancano fonte/data, `--strict-instruments` blocca l'analisi fiscale.
-
-Esempio/template: `skills/italian-investor/examples/strumenti-registry-esempio.csv`.
-
-## Fiscalità implementata
-
-Tra le regole già sottoposte a test di regressione:
-
-- guadagno OICR/ETF come reddito di capitale e asimmetria con le minus;
-- perdita OICR come reddito diverso;
-- quota OICR riferibile a titoli pubblici agevolati;
-- 26% ordinario;
-- titoli pubblici: reddito diverso computato al 48,08% **prima** della compensazione;
-- perdita su titolo pubblico ridotta al 48,08%;
-- azioni, obbligazioni e certificates nei casi coperti;
-- commissioni/oneri inerenti nel calcolo del costo;
-- hard-stop su cripto, OICR non armonizzati, PIR, previdenza ed ETC/ETN quando non esiste una qualificazione verificata applicabile.
-
-Se `quota_stato` di un OICR manca, il motore restituisce uno **scenario** e non un numero fittiziamente preciso. Se è fuori dall'intervallo 0..1, viene rifiutata.
-
-## Successione
-
-La skill separa sempre:
-
-1. cosa entra nell'attivo ereditario;
-2. eventuale imposta di successione;
-3. costo fiscalmente riconosciuto all'erede;
-4. trattamento fiscale della futura vendita/provento.
-
-`scripts/successione.py` implementa in modo deterministico solo la parte coperta direttamente dall'art. 68 c.6 per azioni/titoli/obbligazioni: valore definito o, in mancanza, dichiarato; per titoli esenti, valore normale alla data di apertura; oneri inerenti documentabili aggiunti al costo. ETF/OICR e strumenti ibridi restano fuori da **questo specifico helper**: hanno regole proprie da verificare e non vengono assimilati per analogia.
-
-I casi sono in `tests/casi_successione.json` e fanno parte della CI.
+Se lo stesso ISIN è presente su broker differenti, resta separato nel contesto
+fiscale ma `portfolio.py` lo **aggrega per ISIN** nel calcolo di HHI e top-5, in
+modo da misurare correttamente la concentrazione economica.
 
 ## Fonti e anti-allucinazione
 
 Gerarchia principale:
 
 1. Normattiva, Agenzia delle Entrate, MEF, CONSOB, EUR-Lex/ESMA;
-2. KID/prospetti dell'emittente e documenti di quotazione;
+2. KID/prospetto/emittente e documenti di quotazione;
 3. database finanziari e documentazione del broker;
 4. blog/forum solo come pista di ricerca.
 
-Ogni test marcato `normativo` deve contenere `fonte`, `articolo` e `verificato_il`, altrimenti la CI fallisce.
+I valori variabili nel tempo sono separati in `references/regole-correnti.md`.
+Una regola senza fonte adeguata resta `NON VERIFICATO`.
 
 La skill chiude le analisi con un **claim audit**:
 
@@ -210,46 +206,86 @@ La skill chiude le analisi con un **claim audit**:
 | --- | --- | --- | --- | --- |
 | ... | dato / legge / calcolo / opinione | ... | ... | Alta/Media/Bassa |
 
-## Struttura
+## Test
+
+```bash
+python skills/italian-investor/tests/run_tests.py
+python skills/italian-investor/tests/run_support_tests.py
+python skills/italian-investor/tests/run_extended_tests.py
+```
+
+La CI esegue inoltre smoke test degli script e verifica che le versioni dei
+manifest Claude, marketplace Claude e Codex siano identiche.
+
+## Compatibilità e distribuzione
+
+La sorgente canonica e provider-neutral è `skills/italian-investor/`.
+
+- **Claude Code**: marketplace/plugin in `.claude-plugin/`.
+- **ChatGPT + Codex**: manifest nativo in `.codex-plugin/plugin.json` e repo
+  marketplace in `.agents/plugins/marketplace.json`.
+- **OpenAI Skills API**: la stessa directory della skill può essere caricata e
+  versionata senza duplicare le istruzioni.
+
+Per submission e test reviewer vedi [OPENAI.md](OPENAI.md).
+
+### Claude Code
+
+```bash
+/plugin marketplace add eliazv/italian-investor
+/plugin install italian-investor@italian-investor
+```
+
+### OpenAI Skills API
+
+```bash
+export OPENAI_API_KEY="..."
+bash ./tools/openai/upload-skill.sh
+```
+
+## Struttura principale
 
 ```text
-.codex-plugin/plugin.json
-.agents/plugins/marketplace.json
-.claude-plugin/
-OPENAI.md
-PRIVACY.md
-SUPPORT.md
-TERMS.md
-openai/submission-tests.md
-tools/openai/upload-skill.sh
 skills/italian-investor/
 ├── SKILL.md
 ├── references/
 │   ├── fonti.md
 │   ├── fiscalita.md
+│   ├── eventi-fiscali.md
+│   ├── strategie-fiscali.md
 │   └── regole-correnti.md
 ├── scripts/
-│   ├── tax_engine.py
-│   ├── portfolio.py
-│   ├── zainetto.py
+│   ├── portfolio_validator.py
 │   ├── instrument_resolver.py
+│   ├── portfolio.py
+│   ├── tax_engine.py
+│   ├── event_tax.py
+│   ├── cost_basis.py
+│   ├── lot_sale.py
+│   ├── zainetto.py
 │   └── successione.py
 ├── examples/
 │   ├── portafoglio-esempio.csv
+│   ├── lotti-esempio.csv
 │   ├── zainetto-esempio.csv
 │   └── strumenti-registry-esempio.csv
 └── tests/
     ├── casi_fiscali.json
     ├── casi_successione.json
     ├── run_tests.py
-    └── run_support_tests.py
+    ├── run_support_tests.py
+    └── run_extended_tests.py
 ```
 
 ## Stato
 
-**v0.4.0**. Le regole portanti sono corredate da riferimenti normativi/prassi e test automatici. La CI esegue casi fiscali, zainetto, resolver ISIN, successione e smoke test del flusso portfolio.
+**v0.5.0** — aggiunge classificazione per evento fiscale, proventi periodici,
+base fiscale e vendite a lotti, validazione portfolio, HHI aggregato per ISIN e
+controlli CI più forti sui manifest.
 
-Il nuovo testo unico delle imposte sui redditi (D.Lgs. 117/2026) è applicabile dal 1° gennaio 2027 e cambia la numerazione dei riferimenti: la skill impone di verificare il testo vigente per il periodo d'imposta analizzato.
+Il nuovo testo unico delle imposte sui redditi (D.Lgs. 117/2026) è applicabile
+dal 1° gennaio 2027 e cambia la numerazione dei riferimenti: la skill impone di
+verificare il testo vigente per il periodo d'imposta analizzato.
 
 ## Supporto e policy
 
