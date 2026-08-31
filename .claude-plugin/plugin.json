@@ -1,7 +1,7 @@
 {
   "name": "italian-investor",
-  "description": "Analisi tax-aware per investitori italiani: eventi fiscali, ETF, azioni, BTP, obbligazioni, base fiscale a lotti, zainetto, ribilanciamento e successione con fonti primarie.",
-  "version": "0.5.0",
+  "description": "Analisi tax-aware per investitori italiani: eventi fiscali, ETF, azioni, BTP, obbligazioni, lotti per posizione, zainetto, ribilanciamento e successione con fonti primarie.",
+  "version": "0.5.1",
   "author": {
     "name": "Elia Zavatta",
     "url": "https://github.com/eliazv"
