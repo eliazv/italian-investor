@@ -11,7 +11,10 @@ Fa tre cose utili e deterministiche:
 Formato registry CSV:
     isin,tipo,fonte,verificato_il
 
-Una voce senza fonte o data non rende il tipo fiscalmente azionabile.
+Una voce senza fonte o data non rende il tipo fiscalmente azionabile. Un tipo
+puo' essere riconosciuto dal resolver e restare comunque non calcolabile dal
+motore fiscale: e' intenzionale, per distinguere "so che prodotto e'" da
+"conosco la regola fiscale applicabile".
 """
 
 import argparse
@@ -22,8 +25,10 @@ import sys
 
 ISIN_RE = re.compile(r"^[A-Z]{2}[A-Z0-9]{9}[0-9]$")
 TIPI_NOTI = {
-    "etf", "oicr", "azione", "obbligazione", "titolo_stato",
+    "etf", "oicr", "etf_non_armonizzato",
+    "azione", "obbligazione", "titolo_stato",
     "etc_etn", "certificate", "liquidita",
+    "cripto", "fondo_pensione", "pir",
 }
 
 
