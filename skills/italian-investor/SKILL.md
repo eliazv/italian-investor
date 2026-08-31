@@ -17,7 +17,7 @@ classificazioni di strumenti o aritmetica fiscale.
 Non usare mai la memoria interna del modello per:
 
 - aliquote vigenti e basi imponibili;
-- trattamento fiscale di uno strumento;
+- trattamento fiscale di uno strumento o di uno specifico evento;
 - compensabilità e scadenza delle minusvalenze;
 - criterio di determinazione della base fiscale/ordine dei lotti;
 - imposta di successione e costo fiscale dell'erede;
@@ -30,45 +30,56 @@ Se non trovi una fonte autorevole: **non dedurre la regola**. Scrivi
 
 ## Procedura
 
-1. **Profilo.** Verifica residenza fiscale, regime (amministrato / dichiarativo
+1. **Qualità dati.** Prima di interpretare un CSV portfolio esegui
+   `scripts/portfolio_validator.py`. Non correggere silenziosamente quantità,
+   prezzi, unità obbligazionarie, duplicati o ISIN incoerenti. Un duplicato
+   dello stesso ISIN/broker va consolidato nel portfolio e mantenuto a lotti in
+   un dataset separato.
+2. **Profilo.** Verifica residenza fiscale, regime (amministrato / dichiarativo
    / gestito), broker, orizzonte, target e minusvalenze con anno di realizzo.
-2. **Strumenti.** Parti sempre da `ISIN → natura giuridica → categoria fiscale`.
-   Il campo `tipo` del CSV è una dichiarazione dell'utente, non una prova. Usa
+3. **Strumenti.** Parti sempre da `ISIN → natura giuridica`. Il campo `tipo` del
+   CSV è una dichiarazione dell'utente, non una prova. Usa
    `scripts/instrument_resolver.py` o il registry ISIN verificato. Non dedurre
    il tipo dal prefisso ISIN o dal nome commerciale. Per ETC/ETN consulta la
    sezione `Taxation in Italy` del prospetto specifico.
-3. **Base fiscale.** Prima di usare `pmc` determina quale criterio si applica a
+4. **Evento fiscale.** Dopo lo strumento identifica l'evento: vendita, rimborso,
+   cedola, interesse, dividendo, distribuzione, successione. **Non esiste una
+   sola categoria fiscale per strumento**: una obbligazione può generare reddito
+   diverso con la cessione e reddito di capitale con la cedola. Usa
+   `scripts/event_tax.py` per i proventi periodici coperti e
+   `scripts/tax_engine.py` per le vendite.
+5. **Base fiscale.** Prima di usare `pmc` determina quale criterio si applica a
    regime, strumento ed evento. In amministrato, per i redditi diversi coperti,
    verifica il costo medio ponderato della categoria omogenea; in dichiarativo
    verifica se la vendita parziale richiede i lotti/LIFO. Per ETF/OICR non
    estendere una regola di costo alla componente di reddito di capitale senza
-   verificarne la disciplina specifica.
-4. **Zainetto.** Preferisci il CSV strutturato a un saldo unico. Ogni lotto deve
+   verificarne la disciplina specifica. Usa `scripts/lot_sale.py` nei casi
+   lot-aware coperti.
+6. **Zainetto.** Preferisci il CSV strutturato a un saldo unico. Ogni lotto deve
    avere `broker, regime, anno_realizzo, importo`. In amministrato una vendita
    usa solo le minus disponibili presso lo stesso intermediario e non scadute;
    in dichiarativo il simulatore può aggregare i lotti marcati dichiarativo.
-5. **Valuta e flussi esteri.** Se acquisto, vendita o provento non sono in euro,
+7. **Valuta e flussi esteri.** Se acquisto, vendita o provento non sono in euro,
    verifica date e cambi fiscalmente rilevanti; `valuta_esposizione` non è la
    valuta fiscale dell'operazione. Con broker o redditi esteri verifica anche
    monitoraggio, IVAFE e trattamento delle ritenute estere prima del calcolo.
-6. **Calcoli.** Esegui i numeri con gli script, non a mente. Per il portfolio usa
-   `portfolio.py`; per una vendita `tax_engine.py`; per lo zainetto
-   `zainetto.py`; per successione `successione.py`. Gli script non sanano una
-   base fiscale non verificata: input sbagliato → output sbagliato.
-7. **Norma.** Per ogni conclusione fiscale rilevante recupera una fonte
-   corrente secondo [references/fonti.md](references/fonti.md), verificane la
-   vigenza alla data rilevante e cita norma/articolo/circolare.
-8. **Tax drag.** Prima di consigliare una vendita confronta imposta immediata,
-   eventuali bollo/IVAFE, ritenute estere non recuperabili, imposte di
-   transazione, commissioni, spread e cambio. Se un componente non è
-   verificabile, dichiaralo invece di ometterlo.
-9. **Separazione.** Distingui sempre `dato → legge → calcolo → opinione`.
-10. **Claim audit.** Chiudi ogni analisi con la tabella di audit.
-11. **Revisione avversariale.** Cerca attivamente errori su fiscalità,
+8. **Calcoli.** Esegui i numeri con gli script, non a mente. Gli script non
+   sanano una classificazione o una base fiscale non verificata:
+   input sbagliato → output sbagliato.
+9. **Norma.** Per ogni conclusione fiscale rilevante recupera una fonte corrente
+   secondo [references/fonti.md](references/fonti.md), verificane la vigenza
+   alla data rilevante e cita norma/articolo/circolare.
+10. **Tax drag.** Prima di consigliare una vendita confronta imposta immediata,
+    eventuali bollo/IVAFE, ritenute estere non recuperabili, imposte di
+    transazione, commissioni, spread e cambio. Se un componente non è
+    verificabile, dichiaralo invece di ometterlo.
+11. **Separazione.** Distingui sempre `dato → legge → calcolo → opinione`.
+12. **Claim audit.** Chiudi ogni analisi con la tabella di audit.
+13. **Revisione avversariale.** Cerca attivamente errori su evento fiscale,
     classificazione strumento, base fiscale, valuta, concentrazione, assunzioni
     sui rendimenti, costi e ordine delle operazioni.
-12. **Stop.** Se manca un dato che può cambiare la conclusione (regime, broker,
-    base fiscale/lotti, quota agevolata, scadenza minus, valuta/cambio,
+14. **Stop.** Se manca un dato che può cambiare la conclusione (regime, broker,
+    evento, base fiscale/lotti, quota agevolata, scadenza minus, valuta/cambio,
     KID/prospetto), fermati. Non stimarlo.
 
 ## Riferimenti
@@ -76,6 +87,8 @@ Se non trovi una fonte autorevole: **non dedurre la regola**. Scrivi
 - [references/fonti.md](references/fonti.md) — gerarchia delle fonti e vigenza.
 - [references/fiscalita.md](references/fiscalita.md) — redditi di capitale vs
   diversi, titoli pubblici, OICR, zainetto, successione.
+- [references/eventi-fiscali.md](references/eventi-fiscali.md) — routing per
+  vendita, dividendo, cedola, interesse e distribuzione OICR.
 - [references/strategie-fiscali.md](references/strategie-fiscali.md) — base
   fiscale, accumulazione/distribuzione, multi-ISIN, ordine operazioni,
   trasferimenti broker, valuta, redditi esteri, Tobin tax e tax drag.
@@ -87,6 +100,9 @@ Se non trovi una fonte autorevole: **non dedurre la regola**. Scrivi
 Tutti gli script sono stdlib-only e stampano JSON.
 
 ```bash
+# Validazione strutturale prima dell'analisi
+python scripts/portfolio_validator.py valida portafoglio.csv
+
 # Analisi base
 python scripts/portfolio.py analizza portafoglio.csv
 
@@ -95,10 +111,24 @@ python scripts/zainetto.py stato zainetto.csv --anno-fiscale 2026
 python scripts/zainetto.py compensa zainetto.csv --importo 700 \
   --broker Directa --regime amministrato --anno-fiscale 2026
 
-# Ribilanciamento usando il vero zainetto fiscale disponibile per posizione
+# Ribilanciamento tax-aware
 python scripts/portfolio.py ribilancia portafoglio.csv \
   --target azionario=70,obbligazionario=25,liquidita=5 \
   --zainetto-csv zainetto.csv --anno-fiscale 2026 --regime amministrato
+
+# Base fiscale aritmetica da lotti
+python scripts/cost_basis.py calcola lotti.csv --metodo cmp --quantita 25
+python scripts/cost_basis.py calcola lotti.csv --metodo lifo --quantita 25
+
+# Vendita lot-aware nei casi coperti
+python scripts/lot_sale.py vendita --tipo azione --regime dichiarativo \
+  --lotti lotti.csv --prezzo 140 --quantita 15
+
+# Evento periodico: cedola/dividendo/distribuzione
+python scripts/event_tax.py classifica --tipo obbligazione --evento cedola
+python scripts/event_tax.py provento --tipo azione --evento dividendo --lordo 100
+python scripts/event_tax.py provento --tipo etf --evento distribuzione \
+  --lordo 100 --quota-stato 0.30
 
 # Verifica ISIN/tipo contro un registry costruito da KID/prospetti verificati
 python scripts/instrument_resolver.py resolve \
@@ -116,13 +146,34 @@ python scripts/successione.py costo --tipo titolo_stato \
 # Test
 python tests/run_tests.py
 python tests/run_support_tests.py
+python tests/run_extended_tests.py
 ```
 
 Esempi:
 
 - [examples/portafoglio-esempio.csv](examples/portafoglio-esempio.csv)
+- [examples/lotti-esempio.csv](examples/lotti-esempio.csv)
 - [examples/zainetto-esempio.csv](examples/zainetto-esempio.csv)
 - [examples/strumenti-registry-esempio.csv](examples/strumenti-registry-esempio.csv)
+
+## Evento fiscale prima della categoria
+
+Non usare la classificazione della vendita per classificare automaticamente un
+flusso periodico.
+
+Esempi:
+
+```text
+azione + vendita      -> reddito diverso nei casi coperti
+azione + dividendo    -> reddito di capitale
+obbligazione + vendita -> reddito diverso nei casi coperti
+obbligazione + cedola  -> reddito di capitale
+ETF/OICR + distribuzione -> reddito di capitale
+```
+
+Per dividendi esteri con ritenuta alla fonte `event_tax.py` fa hard-stop:
+servono Paese, convenzione, modalità di incasso e trattamento della doppia
+imposizione. Vedi [references/eventi-fiscali.md](references/eventi-fiscali.md).
 
 ## Instrument resolver
 
@@ -153,9 +204,28 @@ La distinzione è particolarmente importante nelle vendite parziali:
 - per ETF/OICR la componente positiva e quella negativa possono seguire regole
   reddituali differenti: non usare un solo criterio per analogia.
 
+`scripts/cost_basis.py` esegue soltanto l'aritmetica CMP/LIFO.
+`scripts/lot_sale.py` collega quella base alla simulazione della vendita, ma
+deduce automaticamente CMP/LIFO solo per azioni, obbligazioni, titoli pubblici
+e certificates nei casi coperti. ETF/OICR fanno hard-stop invece di essere
+assimilati.
+
 Se la conclusione dipende dai lotti e non sono disponibili, restituisci
-`BASE_FISCALE_NON_VERIFICATA`. Vedi
-[references/strategie-fiscali.md](references/strategie-fiscali.md).
+`BASE_FISCALE_NON_VERIFICATA`.
+
+## Validazione portfolio
+
+`portfolio_validator.py` è obbligatorio prima di usare metriche o fiscalità di
+un CSV non già validato. Blocca, tra l'altro:
+
+- quantità non positive o numeri non finiti;
+- ISIN formalmente invalidi;
+- stesso ISIN con tipi incoerenti;
+- duplicati dello stesso `ISIN + broker` che falserebbero pesi/HHI;
+- `quota_stato` fuori da 0..1.
+
+Segnala inoltre unità obbligazionarie sospette, broker/valute mancanti e ricorda
+che `pmc` non equivale automaticamente a base fiscale.
 
 ## Zainetto strutturato
 
