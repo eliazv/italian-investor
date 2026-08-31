@@ -44,9 +44,17 @@ jobs:
         run: |
           python - <<'PY'
           import json
-          p = json.load(open(".claude-plugin/plugin.json", encoding="utf-8"))["version"]
-          m = json.load(open(".claude-plugin/marketplace.json", encoding="utf-8"))
-          mp = m["plugins"][0]["version"]
-          assert p == mp, "version disallineate: plugin.json %s, marketplace.json %s" % (p, mp)
-          print("version allineate:", p)
+          claude = json.load(open(".claude-plugin/plugin.json", encoding="utf-8"))["version"]
+          marketplace = json.load(open(".claude-plugin/marketplace.json", encoding="utf-8"))
+          marketplace_meta = marketplace["metadata"]["version"]
+          marketplace_plugin = marketplace["plugins"][0]["version"]
+          codex = json.load(open(".codex-plugin/plugin.json", encoding="utf-8"))["version"]
+          versions = {
+              "claude-plugin": claude,
+              "claude-marketplace-metadata": marketplace_meta,
+              "claude-marketplace-plugin": marketplace_plugin,
+              "codex-plugin": codex,
+          }
+          assert len(set(versions.values())) == 1, "version disallineate: %r" % versions
+          print("version allineate:", claude)
           PY
