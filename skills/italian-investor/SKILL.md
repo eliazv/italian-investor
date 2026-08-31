@@ -19,7 +19,9 @@ Non usare mai la memoria interna del modello per:
 - aliquote vigenti e basi imponibili;
 - trattamento fiscale di uno strumento;
 - compensabilità e scadenza delle minusvalenze;
+- criterio di determinazione della base fiscale/ordine dei lotti;
 - imposta di successione e costo fiscale dell'erede;
+- obblighi dichiarativi, monitoraggio, bollo, IVAFE o imposte di transazione;
 - caratteristiche di prodotto (TER, duration, holdings, valuta, ISIN,
   percentuale di titoli pubblici agevolati).
 
@@ -35,29 +37,48 @@ Se non trovi una fonte autorevole: **non dedurre la regola**. Scrivi
    `scripts/instrument_resolver.py` o il registry ISIN verificato. Non dedurre
    il tipo dal prefisso ISIN o dal nome commerciale. Per ETC/ETN consulta la
    sezione `Taxation in Italy` del prospetto specifico.
-3. **Zainetto.** Preferisci il CSV strutturato a un saldo unico. Ogni lotto deve
+3. **Base fiscale.** Prima di usare `pmc` determina quale criterio si applica a
+   regime, strumento ed evento. In amministrato, per i redditi diversi coperti,
+   verifica il costo medio ponderato della categoria omogenea; in dichiarativo
+   verifica se la vendita parziale richiede i lotti/LIFO. Per ETF/OICR non
+   estendere una regola di costo alla componente di reddito di capitale senza
+   verificarne la disciplina specifica.
+4. **Zainetto.** Preferisci il CSV strutturato a un saldo unico. Ogni lotto deve
    avere `broker, regime, anno_realizzo, importo`. In amministrato una vendita
    usa solo le minus disponibili presso lo stesso intermediario e non scadute;
    in dichiarativo il simulatore può aggregare i lotti marcati dichiarativo.
-4. **Calcoli.** Esegui i numeri con gli script, non a mente. Per il portfolio usa
+5. **Valuta e flussi esteri.** Se acquisto, vendita o provento non sono in euro,
+   verifica date e cambi fiscalmente rilevanti; `valuta_esposizione` non è la
+   valuta fiscale dell'operazione. Con broker o redditi esteri verifica anche
+   monitoraggio, IVAFE e trattamento delle ritenute estere prima del calcolo.
+6. **Calcoli.** Esegui i numeri con gli script, non a mente. Per il portfolio usa
    `portfolio.py`; per una vendita `tax_engine.py`; per lo zainetto
-   `zainetto.py`; per successione `successione.py`.
-5. **Norma.** Per ogni conclusione fiscale rilevante recupera una fonte
+   `zainetto.py`; per successione `successione.py`. Gli script non sanano una
+   base fiscale non verificata: input sbagliato → output sbagliato.
+7. **Norma.** Per ogni conclusione fiscale rilevante recupera una fonte
    corrente secondo [references/fonti.md](references/fonti.md), verificane la
    vigenza alla data rilevante e cita norma/articolo/circolare.
-6. **Separazione.** Distingui sempre `dato → legge → calcolo → opinione`.
-7. **Claim audit.** Chiudi ogni analisi con la tabella di audit.
-8. **Revisione avversariale.** Cerca attivamente errori su fiscalità,
-   classificazione strumento, valuta, concentrazione, assunzioni sui rendimenti,
-   costi e ordine delle operazioni.
-9. **Stop.** Se manca un dato che può cambiare la conclusione (regime, broker,
-   PMC, quota agevolata, scadenza minus, KID/prospetto), fermati. Non stimarlo.
+8. **Tax drag.** Prima di consigliare una vendita confronta imposta immediata,
+   eventuali bollo/IVAFE, ritenute estere non recuperabili, imposte di
+   transazione, commissioni, spread e cambio. Se un componente non è
+   verificabile, dichiaralo invece di ometterlo.
+9. **Separazione.** Distingui sempre `dato → legge → calcolo → opinione`.
+10. **Claim audit.** Chiudi ogni analisi con la tabella di audit.
+11. **Revisione avversariale.** Cerca attivamente errori su fiscalità,
+    classificazione strumento, base fiscale, valuta, concentrazione, assunzioni
+    sui rendimenti, costi e ordine delle operazioni.
+12. **Stop.** Se manca un dato che può cambiare la conclusione (regime, broker,
+    base fiscale/lotti, quota agevolata, scadenza minus, valuta/cambio,
+    KID/prospetto), fermati. Non stimarlo.
 
 ## Riferimenti
 
 - [references/fonti.md](references/fonti.md) — gerarchia delle fonti e vigenza.
 - [references/fiscalita.md](references/fiscalita.md) — redditi di capitale vs
   diversi, titoli pubblici, OICR, zainetto, successione.
+- [references/strategie-fiscali.md](references/strategie-fiscali.md) — base
+  fiscale, accumulazione/distribuzione, multi-ISIN, ordine operazioni,
+  trasferimenti broker, valuta, redditi esteri, Tobin tax e tax drag.
 - [references/regole-correnti.md](references/regole-correnti.md) — valori
   variabili nel tempo, con data di verifica.
 
@@ -117,6 +138,24 @@ isin,tipo,fonte,verificato_il
 
 Se l'ISIN non è nel registry, il tipo è incoerente o mancano fonte/data, la
 conclusione fiscale va bloccata in modalità `--strict-instruments`.
+
+## Base fiscale e lotti
+
+Il campo `pmc` è un input operativo, **non una prova della base fiscale**.
+Prima di simulare una vendita verifica che corrisponda al criterio applicabile.
+La distinzione è particolarmente importante nelle vendite parziali:
+
+- nel risparmio amministrato, per i redditi diversi coperti dall'art. 6 del
+  D.Lgs. 461/1997, il riferimento è il costo/valore medio ponderato della
+  categoria omogenea;
+- nel dichiarativo, per le fattispecie dell'art. 67 c.1-bis TUIR fino al 2026,
+  l'ordine dei lotti è LIFO;
+- per ETF/OICR la componente positiva e quella negativa possono seguire regole
+  reddituali differenti: non usare un solo criterio per analogia.
+
+Se la conclusione dipende dai lotti e non sono disponibili, restituisci
+`BASE_FISCALE_NON_VERIFICATA`. Vedi
+[references/strategie-fiscali.md](references/strategie-fiscali.md).
 
 ## Zainetto strutturato
 
@@ -178,9 +217,16 @@ minusvalenze.
 ## Convenzioni portfolio CSV
 
 Colonne richieste: `isin,nome,tipo,quantita,pmc,prezzo,asset_class`.
-Consigliate: `valuta_esposizione,area,settore,broker,quota_stato`.
+Consigliate: `valuta_esposizione,valuta_quotazione,area,settore,broker,quota_stato`.
+
+Per il dichiarativo o quando una vendita parziale dipende dalla base fiscale,
+usa un dataset a lotti separato con almeno
+`isin,data_acquisto,quantita,costo_unitario,valuta,costi` invece di inventare un
+PMC equivalente.
 
 Obbligazioni: `quantita` = valore nominale, `pmc` e `prezzo` in frazione
 (corso 101,30 → `1.0130`). `valuta_esposizione` è la valuta economica dei
-sottostanti, non quella di quotazione. `quota_stato` è compresa tra 0 e 1 e
-deve provenire dall'emittente/intermediario; se manca non assumere 0.
+sottostanti, non quella di quotazione. `valuta_quotazione` serve a identificare
+i flussi da convertire secondo la regola fiscale applicabile. `quota_stato` è
+compresa tra 0 e 1 e deve provenire dall'emittente/intermediario; se manca non
+assumere 0.
