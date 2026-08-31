@@ -48,19 +48,26 @@ conclusione che ne dipende.
    `ISIN + broker + data_acquisto + quantità + costo`. Passalo a
    `portfolio.py ribilancia --lotti-posizioni-csv ...`. Il motore verifica che
    la somma dei lotti coincida con la quantità del portfolio.
-7. **Zainetto.** Preferisci il CSV strutturato `broker,regime,anno_realizzo,importo`.
-   In amministrato usa solo minus compatibili con intermediario/regime/scadenza.
-8. **Valuta e flussi esteri.** Distingui valuta di esposizione da valuta
+7. **Riconciliazione.** Se hai sia portfolio sia lotti, esegui
+   `portfolio_basis.py` prima di fidarti del PMC. Una differenza tra costo da
+   PMC e costo ricostruito dai lotti non va corretta automaticamente: può
+   dipendere da commissioni, trasferimenti, corporate action, valuta o dati
+   broker e va spiegata.
+8. **Zainetto.** Preferisci il CSV strutturato `broker,regime,anno_realizzo,importo`.
+   In amministrato usa solo minus compatibili con intermediario/regime/scadenza;
+   in dichiarativo i lotti dichiarativi possono essere aggregati anche se
+   originati da intermediari diversi, nei casi previsti.
+9. **Valuta e flussi esteri.** Distingui valuta di esposizione da valuta
    fiscalmente rilevante. Per redditi esteri verifica Paese, ritenuta,
    convenzione, intermediario e doppia imposizione prima del calcolo.
-9. **Fonti.** Per ogni conclusione fiscale rilevante recupera una fonte corrente
-   secondo `references/fonti.md`. Verifica la vigenza per il periodo d'imposta.
-10. **Tax drag.** Considera imposta immediata, bollo/IVAFE se applicabili,
+10. **Fonti.** Per ogni conclusione fiscale rilevante recupera una fonte corrente
+    secondo `references/fonti.md`. Verifica la vigenza per il periodo d'imposta.
+11. **Tax drag.** Considera imposta immediata, bollo/IVAFE se applicabili,
     ritenute estere non recuperabili, imposte di transazione, commissioni,
     spread e cambio.
-11. **Separazione.** Distingui sempre `dato → legge → calcolo → opinione`.
-12. **Claim audit.** Chiudi ogni analisi con la tabella di audit.
-13. **Stop.** Se manca un dato che può cambiare la conclusione, non stimarlo.
+12. **Separazione.** Distingui sempre `dato → legge → calcolo → opinione`.
+13. **Claim audit.** Chiudi ogni analisi con la tabella di audit.
+14. **Stop.** Se manca un dato che può cambiare la conclusione, non stimarlo.
 
 ## Riferimenti
 
@@ -84,7 +91,9 @@ registry ISIN verificato + policy freschezza
    ↓
 evento fiscale
    ↓
-lotti posizione + regime + zainetto
+lotti posizione → riconciliazione PMC/base fiscale
+   ↓
+regime + zainetto
    ↓
 motore deterministico
    ↓
@@ -120,6 +129,9 @@ python scripts/lot_sale.py vendita --tipo azione --regime dichiarativo \
 
 # Dataset lotti multi-posizione
 python scripts/portfolio_lots.py lotti-portafoglio.csv
+
+# Riconcilia PMC del portfolio con la base ricostruita dai lotti
+python scripts/portfolio_basis.py portafoglio.csv lotti-portafoglio.csv
 
 # Ribilanciamento con zainetto + lotti reali per ISIN/broker
 python scripts/portfolio.py ribilancia portafoglio.csv \
@@ -184,6 +196,23 @@ Regole operative:
 
 Esempio: `examples/lotti-portafoglio-esempio.csv`.
 
+## Riconciliazione PMC / base fiscale
+
+`scripts/portfolio_basis.py` confronta, per ogni posizione coperta dal lot
+engine:
+
+```text
+quantità portfolio vs quantità lotti
+PMC dichiarato vs costo medio ricostruito
+costo totale da PMC vs costo totale dei lotti
+differenza in euro
+```
+
+È un controllo, non una correzione automatica. Se i due costi divergono, marca
+la posizione `verificare_pmc_e_base_fiscale` e cerca la causa prima di usare il
+valore in una simulazione azionabile. ETF/OICR restano esplicitamente fuori da
+questa riconciliazione automatica.
+
 ## Base fiscale e ribilanciamento
 
 Il campo `pmc` è un input operativo, **non una prova della base fiscale**.
@@ -246,9 +275,10 @@ Directa,amministrato,2024,1200
 IBKR,dichiarativo,2023,800
 ```
 
-Il simulatore consuma prima i lotti con scadenza più vicina per minimizzare il
-rischio di perderli. È una strategia del simulatore, non una regola contabile
-attribuita al broker.
+In amministrato il broker limita i lotti utilizzabili. In dichiarativo il
+simulatore può aggregare i lotti marcati dichiarativo anche se provengono da
+intermediari diversi. Il motore consuma prima le scadenze più vicine: è una
+strategia di simulazione, non una regola contabile attribuita al broker.
 
 ## Output incompleto
 
@@ -278,8 +308,9 @@ python tests/run_support_tests.py
 python tests/run_extended_tests.py
 ```
 
-La CI esegue anche smoke test del flusso portfolio, compreso il ribilanciamento
-con zainetto + lotti, e verifica l'allineamento delle versioni dei manifest.
+La CI esegue anche smoke test del flusso portfolio, compresi ribilanciamento con
+zainetto + lotti e riconciliazione PMC/base fiscale, e verifica l'allineamento
+delle versioni dei manifest.
 
 ## Limiti
 
