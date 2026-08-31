@@ -11,6 +11,7 @@ sys.path.insert(0, os.path.join(BASE, "scripts"))
 from cost_basis import carica_lotti  # noqa: E402
 from event_tax import simula_provento  # noqa: E402
 from lot_sale import simula_vendita_lotti  # noqa: E402
+from portfolio import analizza, leggi  # noqa: E402
 from portfolio_validator import valida_portafoglio  # noqa: E402
 
 
@@ -78,13 +79,13 @@ def test_lotti():
     return errori
 
 
-def test_validator():
+def test_validator_e_concentrazione():
     errori = []
     base = valida_portafoglio(os.path.join(BASE, "examples", "portafoglio-esempio.csv"))
     if not base.get("azionabile"):
         errori.append("portafoglio esempio dovrebbe essere strutturalmente valido: %r" % base.get("errori"))
 
-    contenuto = (
+    contenuto_dup = (
         "isin,nome,tipo,quantita,pmc,prezzo,asset_class,valuta_esposizione,broker,quota_stato\n"
         "US0378331005,Apple A,azione,10,100,120,azionario,USD,BrokerA,0\n"
         "US0378331005,Apple B,azione,5,105,120,azionario,USD,BrokerA,0\n"
@@ -92,7 +93,7 @@ def test_validator():
     path = None
     try:
         with tempfile.NamedTemporaryFile("w", suffix=".csv", delete=False, encoding="utf-8") as f:
-            f.write(contenuto)
+            f.write(contenuto_dup)
             path = f.name
         dup = valida_portafoglio(path)
         if dup.get("azionabile"):
@@ -103,11 +104,41 @@ def test_validator():
         if path and os.path.exists(path):
             os.unlink(path)
 
+    # Stesso ISIN su due broker: fiscalmente separato, economicamente una sola esposizione.
+    contenuto_multi = (
+        "isin,nome,tipo,quantita,pmc,prezzo,asset_class,valuta_esposizione,broker,quota_stato\n"
+        "US0378331005,Apple A,azione,5,100,100,azionario,USD,BrokerA,0\n"
+        "US0378331005,Apple B,azione,5,100,100,azionario,USD,BrokerB,0\n"
+        "US5949181045,Microsoft,azione,10,50,50,azionario,USD,BrokerA,0\n"
+    )
+    path = None
+    try:
+        with tempfile.NamedTemporaryFile("w", suffix=".csv", delete=False, encoding="utf-8") as f:
+            f.write(contenuto_multi)
+            path = f.name
+        check = valida_portafoglio(path)
+        if not check.get("azionabile"):
+            errori.append("stesso ISIN su broker diversi non deve essere bloccante")
+        posizioni, lacune = leggi(path)
+        out = analizza(posizioni, lacune)
+        # Apple vale 1000 su totale 1500, Microsoft 500: HHI = (2/3)^2 + (1/3)^2 = 5/9.
+        if not near(out.get("concentrazione", {}).get("hhi"), 0.5556, 0.0001):
+            errori.append("HHI deve aggregare Apple per ISIN: ottenuto %r" % out.get("concentrazione", {}).get("hhi"))
+        if out.get("strumenti_unici") != 2:
+            errori.append("strumenti_unici atteso 2")
+    finally:
+        if path and os.path.exists(path):
+            os.unlink(path)
+
     return errori
 
 
 def main():
-    gruppi = (("eventi", test_eventi), ("lotti", test_lotti), ("validator", test_validator))
+    gruppi = (
+        ("eventi", test_eventi),
+        ("lotti", test_lotti),
+        ("validator_concentrazione", test_validator_e_concentrazione),
+    )
     falliti = 0
     for nome, fn in gruppi:
         errori = fn()
