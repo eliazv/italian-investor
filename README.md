@@ -6,11 +6,9 @@
 di un residente fiscale italiano con una regola semplice: **la fiscalità non si
 prende dalla memoria del modello**.
 
-Il progetto combina verifica su fonti primarie, validazione dei dati, calcoli
-Python deterministici e hard-stop quando mancano informazioni sufficienti.
-Distingue inoltre **strumento ed evento fiscale**: una obbligazione, per esempio,
-può produrre un reddito diverso quando viene venduta e un reddito di capitale
-quando paga una cedola.
+Il progetto combina fonti primarie, validazione dei dati, calcoli Python
+deterministici e hard-stop quando mancano informazioni sufficienti. Distingue
+strumento, evento fiscale, regime, broker, base fiscale e zainetto.
 
 > Analisi e simulazione, **non** consulenza finanziaria né fiscale e non un software per compilare automaticamente la dichiarazione dei redditi.
 
@@ -18,16 +16,16 @@ quando paga una cedola.
 
 - ETF/OICR, azioni, BTP e altri titoli pubblici agevolati, obbligazioni e
   certificates nei casi esplicitamente coperti;
-- vendita, rimborso, dividendo, cedola/interesse e distribuzione OICR come eventi
-  distinti;
+- vendita, dividendo, cedola/interesse e distribuzione OICR come eventi distinti;
 - minusvalenze e zainetto per broker, regime, anno e scadenza;
-- base fiscale da lotti con CMP/LIFO nei casi verificati;
-- ribilanciamento tax-aware e costo fiscale immediato;
+- base fiscale CMP/LIFO nei casi verificati;
+- vendite parziali con lotti reali;
+- **ribilanciamento con zainetto + lotti fiscali per ISIN e broker**;
 - quota OICR riferibile a titoli pubblici;
-- valuta estera, broker/redditi esteri, Tobin tax e tax drag come controlli da
-  verificare prima di rendere una conclusione azionabile;
+- controlli su valuta, redditi esteri, Tobin tax e tax drag;
 - alcuni casi di successione;
-- validazione strutturale del portfolio e verifica ISIN/tipo tramite registry.
+- validazione strutturale del portfolio e registry ISIN con controllo opzionale
+  di freschezza.
 
 ETC/ETN, OICR non armonizzati, cripto, PIR, previdenza e strumenti con
 trattamento non generalizzabile vengono bloccati quando manca una regola
@@ -35,137 +33,165 @@ verificata applicabile.
 
 ## Errori che la skill evita
 
-Tra gli errori esplicitamente intercettati:
-
 - compensare una minus con un guadagno ETF classificato come reddito di capitale;
 - trattare un ETF governativo come automaticamente tassato tutto al 12,5%;
-- applicare il 48,08% nel punto sbagliato rispetto alla compensazione;
-- usare un `pmc` qualsiasi come se fosse sempre la base fiscale corretta;
+- usare un `pmc` qualsiasi come base fiscale universale;
 - usare CMP e LIFO senza distinguere regime, strumento ed evento;
-- classificare la cedola di una obbligazione come il capital gain della vendita;
-- calcolare un dividendo estero ignorando ritenuta alla fonte e convenzione;
-- usare le minus di un broker come se fossero disponibili su un altro;
-- spostare virtualmente lo zainetto senza certificazione/regola verificata;
+- riutilizzare in sequenza lotti già venduti;
+- fare una vendita parziale dichiarativa usando un PMC medio come se fosse LIFO;
+- classificare una cedola come il capital gain della vendita;
+- calcolare un dividendo estero ignorando la doppia imposizione;
+- usare le minus di un broker su un altro;
 - sottostimare la concentrazione perché lo stesso ISIN è detenuto su più broker;
-- fidarsi di `tipo=etf` senza verifica ISIN/KID/prospetto;
+- fidarsi di un registry strumenti vecchio indefinitamente;
 - estendere per analogia la fiscalità ETF a ETC/ETN;
-- confondere valuta di esposizione e valuta fiscalmente rilevante;
-- comprimere successione, costo fiscale dell'erede e futura tassazione in una
-  sola regola.
+- confondere valuta di esposizione e valuta fiscalmente rilevante.
 
 ## Flusso consigliato
 
 ```text
-CSV / dati portfolio
-        |
-        v
-validazione strutturale
-        |
-        v
-ISIN -> natura giuridica
-        |
-        v
+portfolio.csv
+        ↓
+portfolio_validator.py
+        ↓
+registry ISIN verificato
+        ↓
 evento fiscale
-        |
-        v
-regime + broker + base fiscale/lotti + zainetto
-        |
-        v
+        ↓
+regime + broker + lotti posizione + zainetto
+        ↓
 fonte primaria vigente
-        |
-        v
+        ↓
 motore deterministico
-        |
-        v
+        ↓
 interpretazione + claim audit
 ```
 
 La skill **non è un provider di market data**. Prezzi, holdings, duration,
 rating, TER, quota titoli pubblici e caratteristiche del prodotto devono
-provenire da fonti attendibili e poi essere passati al motore.
+provenire da fonti attendibili.
 
 ## Uso rapido
 
 ```bash
-# 1. Qualità dati
+# Qualità dati
 python skills/italian-investor/scripts/portfolio_validator.py valida portafoglio.csv
 
-# 2. Analisi portfolio
+# Analisi portfolio
 python skills/italian-investor/scripts/portfolio.py analizza portafoglio.csv
 
-# 3. Verifica ISIN/tipo
+# Registry ISIN con policy opzionale di freschezza
 python skills/italian-investor/scripts/instrument_resolver.py resolve \
-  --isin US0378331005 --tipo azione --registry strumenti.csv
+  --isin US0378331005 --tipo azione --registry strumenti.csv \
+  --max-age-giorni 365 --data-riferimento 2026-08-31
 
-# 4. Vendita semplice
+# Vendita semplice
 python skills/italian-investor/scripts/tax_engine.py vendita \
   --tipo etf --pmc 90 --prezzo 120 --quantita 100 --quota-stato 0.35
 
-# 5. Base fiscale da lotti
-python skills/italian-investor/scripts/cost_basis.py calcola lotti.csv \
+# Base fiscale da lotti + residuo
+python skills/italian-investor/scripts/cost_basis.py consuma lotti.csv \
   --metodo lifo --quantita 15
 
-# 6. Vendita lot-aware nei casi coperti
+# Vendita singola lot-aware
 python skills/italian-investor/scripts/lot_sale.py vendita \
   --tipo azione --regime dichiarativo --lotti lotti.csv \
   --prezzo 140 --quantita 15
 
-# 7. Dividendo / cedola / distribuzione
-python skills/italian-investor/scripts/event_tax.py provento \
-  --tipo azione --evento dividendo --lordo 100
-python skills/italian-investor/scripts/event_tax.py provento \
-  --tipo etf --evento distribuzione --lordo 100 --quota-stato 0.30
+# Dataset multi-posizione dei lotti
+python skills/italian-investor/scripts/portfolio_lots.py lotti-portafoglio.csv
 
-# 8. Zainetto
+# Zainetto
 python skills/italian-investor/scripts/zainetto.py stato zainetto.csv \
   --anno-fiscale 2026
 
-# 9. Ribilanciamento
+# Ribilanciamento end-to-end con zainetto + lotti reali
 python skills/italian-investor/scripts/portfolio.py ribilancia portafoglio.csv \
   --target azionario=70,obbligazionario=25,liquidita=5 \
   --zainetto-csv zainetto.csv --anno-fiscale 2026 \
-  --regime amministrato
+  --regime dichiarativo \
+  --lotti-posizioni-csv lotti-portafoglio.csv
 
-# 10. Successione nei casi coperti
+# Dividendo / cedola / distribuzione
+python skills/italian-investor/scripts/event_tax.py provento \
+  --tipo azione --evento dividendo --lordo 100
+
+# Successione nei casi coperti
 python skills/italian-investor/scripts/successione.py costo \
   --tipo titolo_stato --esente-successione --valore-normale 10250
 ```
 
-## Evento fiscale prima della categoria
+## Lotti fiscali nel ribilanciamento
 
-Una classificazione fiscale è riferita a un **evento**, non semplicemente al
-nome dello strumento.
+La novità della **v0.5.1** è l'integrazione dei lotti direttamente dentro
+`portfolio.py ribilancia`.
+
+Formato:
 
 ```text
-azione + vendita          -> reddito diverso nei casi coperti
-azione + dividendo        -> reddito di capitale
-obbligazione + vendita    -> reddito diverso nei casi coperti
-obbligazione + cedola     -> reddito di capitale
-titolo pubblico + vendita -> reddito diverso con disciplina agevolata
-titolo pubblico + cedola  -> reddito di capitale agevolato
-ETF/OICR + distribuzione  -> reddito di capitale
+isin,broker,data_acquisto,quantita,costo_unitario_eur,costi_acquisto_eur
+US0378331005,BrokerA,2024-01-10,20,130,2
+US0378331005,BrokerA,2026-06-10,20,160,2
+```
+
+Quando `--lotti-posizioni-csv` è presente:
+
+1. il motore raggruppa i lotti per `ISIN + broker`;
+2. verifica che la quantità totale coincida con quella del portfolio;
+3. per i tipi coperti applica CMP in amministrato o LIFO in dichiarativo;
+4. simula la vendita con la base fiscale derivata dai lotti;
+5. aggiorna lo zainetto;
+6. consuma i lotti realmente usati e porta il residuo alla vendita successiva;
+7. riporta in output metodo, base fiscale, quantità venduta e lotti residui;
+8. riparte dai lotti iniziali per ogni strategia alternativa, evitando
+   contaminazioni tra scenario A/B/C/D.
+
+Per il CMP il residuo mantiene proporzionalmente il pool e il costo medio: è uno
+stato di simulazione nello stesso regime, non una ricostruzione valida per un
+successivo cambio a LIFO.
+
+ETF/OICR restano fuori dal routing automatico CMP/LIFO e continuano a richiedere
+la verifica della loro disciplina specifica.
+
+Esempio completo:
+`skills/italian-investor/examples/lotti-portafoglio-esempio.csv`.
+
+## Evento fiscale prima della categoria
+
+```text
+azione + vendita           -> reddito diverso nei casi coperti
+azione + dividendo         -> reddito di capitale
+obbligazione + vendita     -> reddito diverso
+obbligazione + cedola      -> reddito di capitale
+titolo pubblico + vendita  -> reddito diverso con disciplina agevolata
+titolo pubblico + cedola   -> reddito di capitale agevolato
+ETF/OICR + distribuzione   -> reddito di capitale
 ```
 
 Vedi `references/eventi-fiscali.md` e `scripts/event_tax.py`.
 
-## Base fiscale e lotti
+## Registry strumenti e freschezza
 
-Il campo `pmc` del portfolio è un input dichiarato, **non una prova della base
-fiscale**.
+Formato:
 
-Nei casi coperti:
+```text
+isin,tipo,fonte,verificato_il
+```
 
-- amministrato: `cost_basis.py` può applicare il costo medio ponderato;
-- dichiarativo: può applicare LIFO quando la fattispecie verificata lo richiede;
-- `lot_sale.py` collega la base derivata dai lotti alla simulazione fiscale;
-- ETF/OICR non vengono assimilati automaticamente alle regole lot-aware delle
-  altre categorie.
+`verificato_il` deve essere `YYYY-MM-DD`. Con `--max-age-giorni` una verifica
+troppo vecchia diventa non azionabile. Nessuna soglia viene inventata di
+default.
 
-Il file esempio è `skills/italian-investor/examples/lotti-esempio.csv`.
+## Validazione e concentrazione
+
+`portfolio_validator.py` blocca quantità/prezzi non validi, ISIN invalidi,
+tipi incoerenti, `quota_stato` fuori intervallo e duplicati dello stesso
+`ISIN + broker`.
+
+Lo stesso ISIN su broker diversi resta separato fiscalmente, ma HHI e top-5
+sono aggregati per ISIN per misurare correttamente la concentrazione economica.
 
 ## Zainetto per broker e scadenza
-
-Formato consigliato:
 
 ```text
 broker,regime,anno_realizzo,importo
@@ -174,19 +200,9 @@ Directa,amministrato,2024,1200
 IBKR,dichiarativo,2023,800
 ```
 
-Il simulatore distingue broker/regime e scadenza. Quando simula più utilizzi
-consuma prima i lotti con scadenza più vicina: è una **strategia del motore**,
-non una regola contabile attribuita all'intermediario.
-
-## Validazione e concentrazione
-
-`portfolio_validator.py` blocca dati che renderebbero l'analisi inaffidabile,
-come quantità non positive, ISIN invalidi, tipi incoerenti e duplicati dello
-stesso `ISIN + broker`.
-
-Se lo stesso ISIN è presente su broker differenti, resta separato nel contesto
-fiscale ma `portfolio.py` lo **aggrega per ISIN** nel calcolo di HHI e top-5, in
-modo da misurare correttamente la concentrazione economica.
+Il simulatore consuma prima le minus con scadenza più vicina per minimizzare il
+rischio di perderle. È una strategia del motore, non una regola contabile
+attribuita all'intermediario.
 
 ## Fonti e anti-allucinazione
 
@@ -197,14 +213,8 @@ Gerarchia principale:
 3. database finanziari e documentazione del broker;
 4. blog/forum solo come pista di ricerca.
 
-I valori variabili nel tempo sono separati in `references/regole-correnti.md`.
+I valori variabili nel tempo stanno in `references/regole-correnti.md`.
 Una regola senza fonte adeguata resta `NON VERIFICATO`.
-
-La skill chiude le analisi con un **claim audit**:
-
-| Affermazione | Tipo | Fonte | Data fonte | Confidenza |
-| --- | --- | --- | --- | --- |
-| ... | dato / legge / calcolo / opinione | ... | ... | Alta/Media/Bassa |
 
 ## Test
 
@@ -214,34 +224,18 @@ python skills/italian-investor/tests/run_support_tests.py
 python skills/italian-investor/tests/run_extended_tests.py
 ```
 
-La CI esegue inoltre smoke test degli script e verifica che le versioni dei
-manifest Claude, marketplace Claude e Codex siano identiche.
+La CI esegue anche smoke test del ribilanciamento con zainetto + lotti e verifica
+che le versioni dei manifest Claude, marketplace Claude e Codex coincidano.
 
 ## Compatibilità e distribuzione
 
-La sorgente canonica e provider-neutral è `skills/italian-investor/`.
+La sorgente canonica è `skills/italian-investor/`.
 
-- **Claude Code**: marketplace/plugin in `.claude-plugin/`.
-- **ChatGPT + Codex**: manifest nativo in `.codex-plugin/plugin.json` e repo
-  marketplace in `.agents/plugins/marketplace.json`.
-- **OpenAI Skills API**: la stessa directory della skill può essere caricata e
-  versionata senza duplicare le istruzioni.
+- **Claude Code**: `.claude-plugin/`.
+- **ChatGPT + Codex**: `.codex-plugin/plugin.json` e `.agents/plugins/marketplace.json`.
+- **OpenAI Skills API**: stessa directory Agent Skill.
 
 Per submission e test reviewer vedi [OPENAI.md](OPENAI.md).
-
-### Claude Code
-
-```bash
-/plugin marketplace add eliazv/italian-investor
-/plugin install italian-investor@italian-investor
-```
-
-### OpenAI Skills API
-
-```bash
-export OPENAI_API_KEY="..."
-bash ./tools/openai/upload-skill.sh
-```
 
 ## Struttura principale
 
@@ -257,6 +251,7 @@ skills/italian-investor/
 ├── scripts/
 │   ├── portfolio_validator.py
 │   ├── instrument_resolver.py
+│   ├── portfolio_lots.py
 │   ├── portfolio.py
 │   ├── tax_engine.py
 │   ├── event_tax.py
@@ -267,6 +262,7 @@ skills/italian-investor/
 ├── examples/
 │   ├── portafoglio-esempio.csv
 │   ├── lotti-esempio.csv
+│   ├── lotti-portafoglio-esempio.csv
 │   ├── zainetto-esempio.csv
 │   └── strumenti-registry-esempio.csv
 └── tests/
@@ -279,9 +275,9 @@ skills/italian-investor/
 
 ## Stato
 
-**v0.5.0** — aggiunge classificazione per evento fiscale, proventi periodici,
-base fiscale e vendite a lotti, validazione portfolio, HHI aggregato per ISIN e
-controlli CI più forti sui manifest.
+**v0.5.1** — aggiunge ribilanciamento lot-aware end-to-end, stato residuo dei
+lotti, validazione quantità portfolio/lotti e integrazione simultanea con lo
+zainetto fiscale.
 
 Il nuovo testo unico delle imposte sui redditi (D.Lgs. 117/2026) è applicabile
 dal 1° gennaio 2027 e cambia la numerazione dei riferimenti: la skill impone di
