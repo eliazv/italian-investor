@@ -8,9 +8,9 @@ description: Analisi di portafoglio tax-aware per residenti fiscali italiani. Da
 Analisi di portafoglio per un residente fiscale italiano, con la fiscalità
 trattata come **dato da verificare**, non come conoscenza del modello.
 
-La skill contiene una procedura anti-allucinazione e piccoli motori Python
-deterministici. Il modello interpreta e spiega; non deve inventare norme,
-classificazioni di strumenti o aritmetica fiscale.
+La skill contiene una procedura anti-allucinazione e motori Python deterministici.
+Il modello interpreta e spiega; non deve inventare norme, classificazioni di
+strumenti, basi fiscali o aritmetica.
 
 ## Regola zero
 
@@ -25,207 +25,215 @@ Non usare mai la memoria interna del modello per:
 - caratteristiche di prodotto (TER, duration, holdings, valuta, ISIN,
   percentuale di titoli pubblici agevolati).
 
-Se non trovi una fonte autorevole: **non dedurre la regola**. Scrivi
-`NON VERIFICATO` e blocca la conclusione che ne dipende.
+Se non trovi una fonte autorevole: scrivi `NON VERIFICATO` e blocca la
+conclusione che ne dipende.
 
-## Procedura
+## Procedura obbligatoria
 
-1. **Qualità dati.** Prima di interpretare un CSV portfolio esegui
-   `scripts/portfolio_validator.py`. Non correggere silenziosamente quantità,
-   prezzi, unità obbligazionarie, duplicati o ISIN incoerenti. Un duplicato
-   dello stesso ISIN/broker va consolidato nel portfolio e mantenuto a lotti in
-   un dataset separato.
-2. **Profilo.** Verifica residenza fiscale, regime (amministrato / dichiarativo
-   / gestito), broker, orizzonte, target e minusvalenze con anno di realizzo.
-3. **Strumenti.** Parti sempre da `ISIN → natura giuridica`. Il campo `tipo` del
-   CSV è una dichiarazione dell'utente, non una prova. Usa
-   `scripts/instrument_resolver.py` o il registry ISIN verificato. Non dedurre
-   il tipo dal prefisso ISIN o dal nome commerciale. Per ETC/ETN consulta la
-   sezione `Taxation in Italy` del prospetto specifico.
-4. **Evento fiscale.** Dopo lo strumento identifica l'evento: vendita, rimborso,
-   cedola, interesse, dividendo, distribuzione, successione. **Non esiste una
-   sola categoria fiscale per strumento**: una obbligazione può generare reddito
-   diverso con la cessione e reddito di capitale con la cedola. Usa
-   `scripts/event_tax.py` per i proventi periodici coperti e
-   `scripts/tax_engine.py` per le vendite.
-5. **Base fiscale.** Prima di usare `pmc` determina quale criterio si applica a
-   regime, strumento ed evento. In amministrato, per i redditi diversi coperti,
-   verifica il costo medio ponderato della categoria omogenea; in dichiarativo
-   verifica se la vendita parziale richiede i lotti/LIFO. Per ETF/OICR non
-   estendere una regola di costo alla componente di reddito di capitale senza
-   verificarne la disciplina specifica. Usa `scripts/lot_sale.py` nei casi
-   lot-aware coperti.
-6. **Zainetto.** Preferisci il CSV strutturato a un saldo unico. Ogni lotto deve
-   avere `broker, regime, anno_realizzo, importo`. In amministrato una vendita
-   usa solo le minus disponibili presso lo stesso intermediario e non scadute;
-   in dichiarativo il simulatore può aggregare i lotti marcati dichiarativo.
-7. **Valuta e flussi esteri.** Se acquisto, vendita o provento non sono in euro,
-   verifica date e cambi fiscalmente rilevanti; `valuta_esposizione` non è la
-   valuta fiscale dell'operazione. Con broker o redditi esteri verifica anche
-   monitoraggio, IVAFE e trattamento delle ritenute estere prima del calcolo.
-8. **Calcoli.** Esegui i numeri con gli script, non a mente. Gli script non
-   sanano una classificazione o una base fiscale non verificata:
-   input sbagliato → output sbagliato.
-9. **Norma.** Per ogni conclusione fiscale rilevante recupera una fonte corrente
-   secondo [references/fonti.md](references/fonti.md), verificane la vigenza
-   alla data rilevante e cita norma/articolo/circolare.
-10. **Tax drag.** Prima di consigliare una vendita confronta imposta immediata,
-    eventuali bollo/IVAFE, ritenute estere non recuperabili, imposte di
-    transazione, commissioni, spread e cambio. Se un componente non è
-    verificabile, dichiaralo invece di ometterlo.
+1. **Qualità dati.** Esegui `scripts/portfolio_validator.py`. Non correggere
+   silenziosamente quantità, prezzi, duplicati, unità obbligazionarie o ISIN.
+2. **Profilo.** Verifica residenza fiscale, regime (amministrato / dichiarativo /
+   gestito), broker, anno fiscale e zainetto per anno di realizzo.
+3. **Strumento.** Parti da `ISIN → natura giuridica`. Il `tipo` del CSV è una
+   dichiarazione, non una prova. Usa `instrument_resolver.py` e un registry
+   verificato su KID/prospetto.
+4. **Evento.** Identifica vendita, rimborso, cedola, interesse, dividendo,
+   distribuzione o successione. Non esiste una sola categoria fiscale per
+   strumento. Usa `event_tax.py` per i flussi periodici coperti e
+   `tax_engine.py` per le vendite semplici.
+5. **Base fiscale.** Prima di usare `pmc`, determina il criterio applicabile.
+   Nei casi coperti il lot engine usa CMP in amministrato e LIFO in
+   dichiarativo. ETF/OICR non vengono assimilati automaticamente.
+6. **Lotti di posizione.** Per vendite parziali azionabili usa un dataset
+   `ISIN + broker + data_acquisto + quantità + costo`. Passalo a
+   `portfolio.py ribilancia --lotti-posizioni-csv ...`. Il motore verifica che
+   la somma dei lotti coincida con la quantità del portfolio.
+7. **Zainetto.** Preferisci il CSV strutturato `broker,regime,anno_realizzo,importo`.
+   In amministrato usa solo minus compatibili con intermediario/regime/scadenza.
+8. **Valuta e flussi esteri.** Distingui valuta di esposizione da valuta
+   fiscalmente rilevante. Per redditi esteri verifica Paese, ritenuta,
+   convenzione, intermediario e doppia imposizione prima del calcolo.
+9. **Fonti.** Per ogni conclusione fiscale rilevante recupera una fonte corrente
+   secondo `references/fonti.md`. Verifica la vigenza per il periodo d'imposta.
+10. **Tax drag.** Considera imposta immediata, bollo/IVAFE se applicabili,
+    ritenute estere non recuperabili, imposte di transazione, commissioni,
+    spread e cambio.
 11. **Separazione.** Distingui sempre `dato → legge → calcolo → opinione`.
 12. **Claim audit.** Chiudi ogni analisi con la tabella di audit.
-13. **Revisione avversariale.** Cerca attivamente errori su evento fiscale,
-    classificazione strumento, base fiscale, valuta, concentrazione, assunzioni
-    sui rendimenti, costi e ordine delle operazioni.
-14. **Stop.** Se manca un dato che può cambiare la conclusione (regime, broker,
-    evento, base fiscale/lotti, quota agevolata, scadenza minus, valuta/cambio,
-    KID/prospetto), fermati. Non stimarlo.
+13. **Stop.** Se manca un dato che può cambiare la conclusione, non stimarlo.
 
 ## Riferimenti
 
-- [references/fonti.md](references/fonti.md) — gerarchia delle fonti e vigenza.
-- [references/fiscalita.md](references/fiscalita.md) — redditi di capitale vs
-  diversi, titoli pubblici, OICR, zainetto, successione.
-- [references/eventi-fiscali.md](references/eventi-fiscali.md) — routing per
-  vendita, dividendo, cedola, interesse e distribuzione OICR.
-- [references/strategie-fiscali.md](references/strategie-fiscali.md) — base
-  fiscale, accumulazione/distribuzione, multi-ISIN, ordine operazioni,
-  trasferimenti broker, valuta, redditi esteri, Tobin tax e tax drag.
-- [references/regole-correnti.md](references/regole-correnti.md) — valori
-  variabili nel tempo, con data di verifica.
+- `references/fonti.md` — gerarchia fonti e controllo di vigenza.
+- `references/fiscalita.md` — redditi di capitale/diversi, titoli pubblici,
+  OICR, zainetto, successione.
+- `references/eventi-fiscali.md` — routing per vendita, dividendo, cedola,
+  interesse e distribuzione OICR.
+- `references/strategie-fiscali.md` — base fiscale, multi-ISIN, ordine
+  operazioni, trasferimenti broker, valuta, redditi esteri, Tobin tax, tax drag.
+- `references/regole-correnti.md` — snapshot di valori variabili nel tempo.
 
-## Script
+## Flusso operativo consigliato
+
+```text
+portfolio.csv
+   ↓
+portfolio_validator.py
+   ↓
+registry ISIN verificato + policy freschezza
+   ↓
+evento fiscale
+   ↓
+lotti posizione + regime + zainetto
+   ↓
+motore deterministico
+   ↓
+interpretazione + claim audit + fonti
+```
+
+## Script principali
 
 Tutti gli script sono stdlib-only e stampano JSON.
 
 ```bash
-# Validazione strutturale prima dell'analisi
+# Qualità dati
 python scripts/portfolio_validator.py valida portafoglio.csv
 
-# Analisi base
+# Analisi portfolio
 python scripts/portfolio.py analizza portafoglio.csv
 
-# Zainetto strutturato per broker e scadenza
+# Registry ISIN con controllo opzionale di freschezza
+python scripts/instrument_resolver.py resolve \
+  --isin US0378331005 --tipo azione --registry strumenti.csv \
+  --max-age-giorni 365 --data-riferimento 2026-08-31
+
+# Zainetto
 python scripts/zainetto.py stato zainetto.csv --anno-fiscale 2026
-python scripts/zainetto.py compensa zainetto.csv --importo 700 \
-  --broker Directa --regime amministrato --anno-fiscale 2026
 
-# Ribilanciamento tax-aware
-python scripts/portfolio.py ribilancia portafoglio.csv \
-  --target azionario=70,obbligazionario=25,liquidita=5 \
-  --zainetto-csv zainetto.csv --anno-fiscale 2026 --regime amministrato
+# Base fiscale CMP/LIFO e stato residuo
+python scripts/cost_basis.py calcola lotti.csv --metodo lifo --quantita 15
+python scripts/cost_basis.py consuma lotti.csv --metodo lifo --quantita 15
 
-# Base fiscale aritmetica da lotti
-python scripts/cost_basis.py calcola lotti.csv --metodo cmp --quantita 25
-python scripts/cost_basis.py calcola lotti.csv --metodo lifo --quantita 25
-
-# Vendita lot-aware nei casi coperti
+# Vendita singola lot-aware
 python scripts/lot_sale.py vendita --tipo azione --regime dichiarativo \
   --lotti lotti.csv --prezzo 140 --quantita 15
 
-# Evento periodico: cedola/dividendo/distribuzione
-python scripts/event_tax.py classifica --tipo obbligazione --evento cedola
+# Dataset lotti multi-posizione
+python scripts/portfolio_lots.py lotti-portafoglio.csv
+
+# Ribilanciamento con zainetto + lotti reali per ISIN/broker
+python scripts/portfolio.py ribilancia portafoglio.csv \
+  --target azionario=70,obbligazionario=25,liquidita=5 \
+  --zainetto-csv zainetto.csv --anno-fiscale 2026 \
+  --regime dichiarativo \
+  --lotti-posizioni-csv lotti-portafoglio.csv
+
+# Evento periodico
 python scripts/event_tax.py provento --tipo azione --evento dividendo --lordo 100
 python scripts/event_tax.py provento --tipo etf --evento distribuzione \
   --lordo 100 --quota-stato 0.30
 
-# Verifica ISIN/tipo contro un registry costruito da KID/prospetti verificati
-python scripts/instrument_resolver.py resolve \
-  --isin US0378331005 --tipo azione --registry strumenti.csv
-
-# Blocca il portfolio se anche uno strumento non e' verificato
-python scripts/portfolio.py analizza portafoglio.csv \
-  --registry strumenti.csv --strict-instruments
-
-# Successione: solo casi coperti esplicitamente dal motore
-python scripts/successione.py costo --tipo azione --valore-dichiarato 10000
+# Successione nei casi coperti
 python scripts/successione.py costo --tipo titolo_stato \
   --esente-successione --valore-normale 10250
-
-# Test
-python tests/run_tests.py
-python tests/run_support_tests.py
-python tests/run_extended_tests.py
 ```
 
-Esempi:
+## Dataset portfolio
 
-- [examples/portafoglio-esempio.csv](examples/portafoglio-esempio.csv)
-- [examples/lotti-esempio.csv](examples/lotti-esempio.csv)
-- [examples/zainetto-esempio.csv](examples/zainetto-esempio.csv)
-- [examples/strumenti-registry-esempio.csv](examples/strumenti-registry-esempio.csv)
+Colonne richieste:
+
+```text
+isin,nome,tipo,quantita,pmc,prezzo,asset_class
+```
+
+Consigliate:
+
+```text
+valuta_esposizione,valuta_quotazione,area,settore,broker,quota_stato
+```
+
+Per obbligazioni `quantita` è il valore nominale; `pmc` e `prezzo` sono in
+frazione (`101,30` → `1.0130`).
+
+Lo stesso ISIN su broker diversi resta separato fiscalmente, ma HHI/top-5 sono
+aggregati per ISIN per rappresentare la concentrazione economica reale.
+
+## Dataset lotti di posizione
+
+Per vendite parziali di azioni, obbligazioni, titoli pubblici e certificates nei
+casi coperti usa:
+
+```text
+isin,broker,data_acquisto,quantita,costo_unitario_eur,costi_acquisto_eur
+US0378331005,BrokerA,2024-01-10,20,130,2
+US0378331005,BrokerA,2026-06-10,20,160,2
+```
+
+Regole operative:
+
+- `ISIN + broker` identifica la posizione fiscale simulata;
+- la somma delle quantità dei lotti deve coincidere con la quantità del portfolio;
+- i costi devono essere già convertiti in EUR con il cambio fiscalmente
+  rilevante verificato;
+- ogni strategia di ribilanciamento riparte dagli stessi lotti iniziali;
+- all'interno di una strategia i lotti vengono consumati operazione per
+  operazione e lo stato residuo viene riportato nell'output;
+- in CMP il residuo è un pool simulato che mantiene il costo medio: non usarlo
+  per inferire un successivo LIFO dopo un cambio di regime;
+- ETF/OICR restano fuori dal routing automatico CMP/LIFO.
+
+Esempio: `examples/lotti-portafoglio-esempio.csv`.
+
+## Base fiscale e ribilanciamento
+
+Il campo `pmc` è un input operativo, **non una prova della base fiscale**.
+
+Nei casi coperti:
+
+- amministrato → costo medio ponderato;
+- dichiarativo → LIFO;
+- `lot_sale.py` collega la base da lotti al `tax_engine.py`;
+- `portfolio.py` può consumare lotti e zainetto nello stesso scenario;
+- la strategia tax-aware ordina le vendite usando la base fiscale dello
+  scenario, senza mutare i lotti delle strategie alternative.
+
+Se `--lotti-posizioni-csv` non è fornito, `portfolio.py` mantiene la modalità
+legacy basata sul PMC e lo dichiara esplicitamente. In dichiarativo una vendita
+parziale basata solo sul PMC non va presentata come definitiva.
 
 ## Evento fiscale prima della categoria
 
-Non usare la classificazione della vendita per classificare automaticamente un
-flusso periodico.
-
-Esempi:
+Esempi coperti:
 
 ```text
-azione + vendita      -> reddito diverso nei casi coperti
-azione + dividendo    -> reddito di capitale
-obbligazione + vendita -> reddito diverso nei casi coperti
-obbligazione + cedola  -> reddito di capitale
-ETF/OICR + distribuzione -> reddito di capitale
+azione + vendita           -> reddito diverso
+azione + dividendo         -> reddito di capitale
+obbligazione + vendita     -> reddito diverso
+obbligazione + cedola      -> reddito di capitale
+titolo pubblico + vendita  -> reddito diverso con disciplina agevolata
+titolo pubblico + cedola   -> reddito di capitale agevolato
+ETF/OICR + distribuzione   -> reddito di capitale
 ```
 
-Per dividendi esteri con ritenuta alla fonte `event_tax.py` fa hard-stop:
-servono Paese, convenzione, modalità di incasso e trattamento della doppia
-imposizione. Vedi [references/eventi-fiscali.md](references/eventi-fiscali.md).
+Per una fonte estera `event_tax.py` fa hard-stop anche se l'utente non ha già
+indicato una ritenuta: il Paese estero basta a richiedere la verifica della
+doppia imposizione.
 
-## Instrument resolver
+## Registry strumenti e freschezza
 
-Il resolver **non cerca di indovinare** che cosa sia un ISIN. Valida il check
-digit ISO 6166/Luhn e, se gli viene fornito un registry, confronta il tipo del
-portfolio con una classificazione verificata su KID/prospetto.
-
-Una riga di registry è azionabile solo con:
+Formato:
 
 ```text
 isin,tipo,fonte,verificato_il
 ```
 
-Se l'ISIN non è nel registry, il tipo è incoerente o mancano fonte/data, la
-conclusione fiscale va bloccata in modalità `--strict-instruments`.
+`verificato_il` deve essere ISO `YYYY-MM-DD`. `--max-age-giorni` è opzionale e
+non ha un default implicito: quando viene impostato, una voce troppo vecchia o
+con data futura rispetto a `--data-riferimento` diventa non azionabile.
 
-## Base fiscale e lotti
-
-Il campo `pmc` è un input operativo, **non una prova della base fiscale**.
-Prima di simulare una vendita verifica che corrisponda al criterio applicabile.
-La distinzione è particolarmente importante nelle vendite parziali:
-
-- nel risparmio amministrato, per i redditi diversi coperti dall'art. 6 del
-  D.Lgs. 461/1997, il riferimento è il costo/valore medio ponderato della
-  categoria omogenea;
-- nel dichiarativo, per le fattispecie dell'art. 67 c.1-bis TUIR fino al 2026,
-  l'ordine dei lotti è LIFO;
-- per ETF/OICR la componente positiva e quella negativa possono seguire regole
-  reddituali differenti: non usare un solo criterio per analogia.
-
-`scripts/cost_basis.py` esegue soltanto l'aritmetica CMP/LIFO.
-`scripts/lot_sale.py` collega quella base alla simulazione della vendita, ma
-deduce automaticamente CMP/LIFO solo per azioni, obbligazioni, titoli pubblici
-e certificates nei casi coperti. ETF/OICR fanno hard-stop invece di essere
-assimilati.
-
-Se la conclusione dipende dai lotti e non sono disponibili, restituisci
-`BASE_FISCALE_NON_VERIFICATA`.
-
-## Validazione portfolio
-
-`portfolio_validator.py` è obbligatorio prima di usare metriche o fiscalità di
-un CSV non già validato. Blocca, tra l'altro:
-
-- quantità non positive o numeri non finiti;
-- ISIN formalmente invalidi;
-- stesso ISIN con tipi incoerenti;
-- duplicati dello stesso `ISIN + broker` che falserebbero pesi/HHI;
-- `quota_stato` fuori da 0..1.
-
-Segnala inoltre unità obbligazionarie sospette, broker/valute mancanti e ricorda
-che `pmc` non equivale automaticamente a base fiscale.
+Riconoscere il tipo non implica che il motore conosca automaticamente la sua
+fiscalità: ETC/ETN, OICR non armonizzati, cripto, PIR e previdenza possono essere
+identificati dal resolver e restare in hard-stop fiscale.
 
 ## Zainetto strutturato
 
@@ -238,37 +246,22 @@ Directa,amministrato,2024,1200
 IBKR,dichiarativo,2023,800
 ```
 
-La scadenza viene calcolata come quarto periodo d'imposta successivo all'anno
-di realizzo. Il simulatore consuma prima i lotti con scadenza più vicina per
-minimizzare il rischio di perderli: **questa è una strategia del simulatore, non
-una regola contabile imposta al broker**.
-
-`--minus 2000` resta disponibile solo come modalità legacy semplificata.
-
-## Successione
-
-Non usare mai la parola "affrancamento" come scorciatoia. Separa almeno:
-
-1. inclusione/esclusione dall'attivo ereditario;
-2. eventuale imposta di successione;
-3. costo fiscalmente riconosciuto all'erede;
-4. futura tassazione del rendimento/cessione, che dipende dalla natura dello
-   strumento.
-
-`scripts/successione.py` implementa soltanto i casi direttamente coperti dalla
-regola dell'art. 68 c.6 per azioni/titoli/obbligazioni: valore definito o, in
-mancanza, dichiarato; per titoli esenti, valore normale alla data di apertura;
-oneri inerenti documentabili aggiunti al costo. Per ETF/OICR e strumenti
-ibridi il modulo fa hard-stop invece di estendere la regola per analogia.
+Il simulatore consuma prima i lotti con scadenza più vicina per minimizzare il
+rischio di perderli. È una strategia del simulatore, non una regola contabile
+attribuita al broker.
 
 ## Output incompleto
 
-Quando un dato necessario manca, il motore non produce falsa precisione. Può
-restituire `imposta_stimata: null`, `dato_mancante` e uno scenario min/max. Lo
-stesso vale per la minusvalenza fiscalmente rilevante di un OICR quando manca
-la percentuale agevolata.
+Quando manca un dato necessario, il motore preferisce `null`, scenario min/max
+o hard-stop alla falsa precisione. Esempi:
 
-## Claim audit (obbligatoria)
+- `quota_stato` mancante su OICR;
+- lotti mancanti o quantità incoerenti;
+- più lotti LIFO nella stessa data con vendita parziale e ordine intraday ignoto;
+- ritenute/redditi esteri senza disciplina verificata;
+- strumento identificato ma fiscalità prodotto-specifica non verificata.
+
+## Claim audit obbligatoria
 
 | Affermazione | Tipo | Fonte | Data fonte | Confidenza |
 | --- | --- | --- | --- | --- |
@@ -277,26 +270,20 @@ la percentuale agevolata.
 Una riga per ogni affermazione che può influenzare una decisione. Se fonte o
 confidenza non sono adeguate, marca la conclusione come non azionabile.
 
+## Test
+
+```bash
+python tests/run_tests.py
+python tests/run_support_tests.py
+python tests/run_extended_tests.py
+```
+
+La CI esegue anche smoke test del flusso portfolio, compreso il ribilanciamento
+con zainetto + lotti, e verifica l'allineamento delle versioni dei manifest.
+
 ## Limiti
 
 Questa skill produce **analisi e simulazioni**, non consulenza finanziaria né
 fiscale. Le imposte effettive in amministrato restano quelle determinate
 dall'intermediario. Non suggerire operazioni motivate soltanto dal recupero di
 minusvalenze.
-
-## Convenzioni portfolio CSV
-
-Colonne richieste: `isin,nome,tipo,quantita,pmc,prezzo,asset_class`.
-Consigliate: `valuta_esposizione,valuta_quotazione,area,settore,broker,quota_stato`.
-
-Per il dichiarativo o quando una vendita parziale dipende dalla base fiscale,
-usa un dataset a lotti separato con almeno
-`isin,data_acquisto,quantita,costo_unitario,valuta,costi` invece di inventare un
-PMC equivalente.
-
-Obbligazioni: `quantita` = valore nominale, `pmc` e `prezzo` in frazione
-(corso 101,30 → `1.0130`). `valuta_esposizione` è la valuta economica dei
-sottostanti, non quella di quotazione. `valuta_quotazione` serve a identificare
-i flussi da convertire secondo la regola fiscale applicabile. `quota_stato` è
-compresa tra 0 e 1 e deve provenire dall'emittente/intermediario; se manca non
-assumere 0.
