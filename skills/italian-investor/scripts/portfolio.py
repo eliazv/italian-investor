@@ -10,7 +10,8 @@ lo script produce numeri, l'interpretazione resta all'analisi.
         --zainetto-csv zainetto.csv --anno-fiscale 2026
 
 Colonne CSV richieste: isin, nome, tipo, quantita, pmc, prezzo, asset_class.
-Colonne opzionali: valuta_esposizione, area, settore, broker, quota_stato.
+Colonne opzionali: valuta_esposizione, valuta_quotazione, area, settore, broker,
+quota_stato.
 """
 
 import argparse
@@ -21,6 +22,7 @@ import sys
 from collections import defaultdict
 
 from instrument_resolver import carica_registry, verifica_portafoglio
+from portfolio_validator import valida_portafoglio
 from tax_engine import simula_vendita
 from zainetto import aggiungi as aggiungi_minus
 from zainetto import carica_csv as carica_zainetto
@@ -29,7 +31,7 @@ from zainetto import disponibile as minus_disponibile
 from zainetto import riepilogo as riepilogo_zainetto
 
 RICHIESTE = ["isin", "nome", "tipo", "quantita", "pmc", "prezzo", "asset_class"]
-OPZIONALI = ["valuta_esposizione", "area", "settore", "broker", "quota_stato"]
+OPZIONALI = ["valuta_esposizione", "valuta_quotazione", "area", "settore", "broker", "quota_stato"]
 
 
 def leggi(percorso):
@@ -80,6 +82,42 @@ def ripartizione(posizioni, chiave, totale):
             for k, v in sorted(agg.items(), key=lambda kv: -kv[1])}
 
 
+def concentrazione_per_isin(posizioni, totale):
+    """Concentrazione economica aggregata per ISIN, indipendente dal broker.
+
+    Lo stesso strumento detenuto su due broker deve restare fiscalmente distinto,
+    ma per HHI/top-5 rappresenta una sola esposizione economica.
+    """
+    valori = defaultdict(float)
+    nomi = {}
+    for p in posizioni:
+        isin = p["isin"]
+        valori[isin] += p["valore"]
+        nomi.setdefault(isin, p["nome"])
+
+    ordinate = sorted(valori.items(), key=lambda kv: -kv[1])
+    pesi = [(isin, valore / totale) for isin, valore in ordinate]
+    hhi = sum(peso ** 2 for _, peso in pesi)
+    dettaglio = [
+        {
+            "isin": isin,
+            "nome": nomi.get(isin),
+            "valore": round(valori[isin], 2),
+            "peso": round(peso, 4),
+        }
+        for isin, peso in pesi
+    ]
+    return {
+        "hhi": round(hhi, 4),
+        "posizioni_equivalenti": round(1 / hhi, 1) if hhi else 0.0,
+        "prima_posizione": round(pesi[0][1], 4) if pesi else 0.0,
+        "prime_cinque": round(sum(p for _, p in pesi[:5]), 4),
+        "strumenti_unici": len(pesi),
+        "aggregata_per": "isin",
+        "dettaglio_top": dettaglio[:10],
+    }
+
+
 def analizza(posizioni, lacune, minus=0.0, zainetto_lotti=None, anno_fiscale=None):
     totale = sum(p["valore"] for p in posizioni)
     if totale <= 0:
@@ -88,8 +126,8 @@ def analizza(posizioni, lacune, minus=0.0, zainetto_lotti=None, anno_fiscale=Non
     for p in posizioni:
         p["peso"] = p["valore"] / totale
 
-    hhi = sum(p["peso"] ** 2 for p in posizioni)
     ordinate = sorted(posizioni, key=lambda p: -p["valore"])
+    concentrazione = concentrazione_per_isin(posizioni, totale)
 
     # Soglia fiscale indicativa: non usa lo zainetto per non simulare un ordine
     # arbitrario di liquidazione tra broker diversi.
@@ -110,13 +148,9 @@ def analizza(posizioni, lacune, minus=0.0, zainetto_lotti=None, anno_fiscale=Non
         "totale": round(totale, 2),
         "costo_totale": round(sum(p["costo"] for p in posizioni), 2),
         "plusvalenza_latente_netta": round(sum(p["plus_minus"] for p in posizioni), 2),
-        "posizioni": len(posizioni),
-        "concentrazione": {
-            "hhi": round(hhi, 4),
-            "posizioni_equivalenti": round(1 / hhi, 1),
-            "prima_posizione": round(ordinate[0]["peso"], 4),
-            "prime_cinque": round(sum(p["peso"] for p in ordinate[:5]), 4),
-        },
+        "righe_portafoglio": len(posizioni),
+        "strumenti_unici": concentrazione["strumenti_unici"],
+        "concentrazione": concentrazione,
         "ripartizioni": {
             "asset_class": ripartizione(posizioni, "asset_class", totale),
             "valuta_esposizione": ripartizione(posizioni, "valuta_esposizione", totale),
@@ -139,8 +173,10 @@ def analizza(posizioni, lacune, minus=0.0, zainetto_lotti=None, anno_fiscale=Non
         "posizioni_non_calcolabili": non_calcolabili,
         "dati_mancanti": lacune,
         "verificare": [
+            "La concentrazione HHI/top-5 e' aggregata per ISIN; la ripartizione per broker resta separata per non perdere il contesto fiscale.",
             "La valuta di esposizione va letta sui sottostanti, non sulla valuta di quotazione: confermare il dato per ogni fondo.",
             "L'imposta di liquidazione integrale non applica lo zainetto: e' una soglia superiore indicativa, non una simulazione di vendita ordinata.",
+            "Il PMC del CSV resta un input dichiarato: verificare che rappresenti la base fiscale applicabile prima di rendere azionabile il calcolo.",
         ],
     }
     if zainetto_lotti is not None and anno_fiscale is not None:
@@ -381,13 +417,16 @@ def ribilancia(posizioni, target, minus=0.0, versamento_mensile=0.0,
         "drift_totale": round(drift_iniziale, 4),
         "strategie": strategie,
         "verificare": [
-            "Le vendite sono simulate pro-quota sulla posizione: il risultato reale dipende dai lotti effettivi e dal criterio applicato dall'intermediario.",
+            "Le vendite sono simulate pro-quota sulla posizione: il risultato reale dipende dai lotti effettivi e dal criterio applicato dall'intermediario. Per vendite lot-aware usare scripts/lot_sale.py nei casi coperti.",
             "Non sono inclusi spread e bollo; le commissioni vanno passate al motore di vendita quando note.",
             "Lo zainetto strutturato distingue broker, regime e anno di scadenza; l'ordine 'scadenza piu' vicina prima' e' una scelta del simulatore, non una regola contabile del broker.",
             "Nessuna strategia va scelta solo per il risultato fiscale.",
             "Il drift residuo e' al netto delle imposte: l'imposta esce dal portafoglio, quindi si reinveste meno di quanto si e' venduto.",
         ],
     }
+    if regime == "dichiarativo":
+        out["verificare"].insert(0,
+            "ATTENZIONE: il ribilanciamento dichiarativo usa ancora il PMC del portfolio per le vendite parziali. Rendere azionabile ogni vendita con scripts/lot_sale.py e i lotti reali; non usare la stima aggregata come imposta definitiva.")
     if zainetto_lotti is not None:
         out["zainetto_modalita"] = "strutturato"
         out["anno_fiscale"] = anno_fiscale
@@ -443,6 +482,18 @@ def main(argv=None):
     if args.strict_instruments and not args.registry:
         raise SystemExit("--strict-instruments richiede --registry.")
 
+    try:
+        qualita = valida_portafoglio(args.csv)
+    except OSError as e:
+        print(json.dumps({"errore": str(e)}, indent=2, ensure_ascii=False))
+        return 1
+    if not qualita.get("azionabile"):
+        print(json.dumps({
+            "errore": "Validazione portfolio fallita: correggere i dati prima dell'analisi.",
+            "validazione_portafoglio": qualita,
+        }, indent=2, ensure_ascii=False))
+        return 1
+
     posizioni, lacune = leggi(args.csv)
     try:
         verifica = prepara_verifica_strumenti(posizioni, args.registry)
@@ -450,6 +501,7 @@ def main(argv=None):
             print(json.dumps({
                 "errore": "Verifica strumenti fallita: almeno un ISIN/tipo non e' azionabile.",
                 "verifica_strumenti": verifica,
+                "validazione_portafoglio": qualita,
             }, indent=2, ensure_ascii=False))
             return 1
         wallet = carica_zainetto(args.zainetto_csv) if args.zainetto_csv else None
@@ -463,6 +515,7 @@ def main(argv=None):
         res = ribilancia(posizioni, parse_target(args.target), args.minus,
                          args.versamento_mensile, wallet, args.anno_fiscale,
                          args.regime)
+    res["validazione_portafoglio"] = qualita
     if verifica is not None:
         res["verifica_strumenti"] = verifica
     else:
